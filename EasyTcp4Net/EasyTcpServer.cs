@@ -60,7 +60,7 @@ namespace EasyTcp4Net
         /// </summary>
         /// <param name="options">服务器对象配置</param>
         /// <exception cref="ArgumentNullException"></exception>
-        public EasyTcpServer(ushort port, string host = null, EasyTcpServerOptions options) : this(port, host)
+        public EasyTcpServer(ushort port, EasyTcpServerOptions options, string host = null) : this(port, host)
         {
             _options = options;
             if (_options.IsSsl)
@@ -184,11 +184,19 @@ namespace EasyTcp4Net
             }
         }
 
-        private async Task ReceiveClientDataAsync(ClientSession clientSession) 
+        private async Task ReceiveClientDataAsync(ClientSession clientSession)
         {
-            while (!clientSession._lifecycleTokenSource.Token.IsCancellationRequested) 
+            while (!clientSession._lifecycleTokenSource.Token.IsCancellationRequested)
             {
-                
+                if (clientSession.IsDisposed)
+                    break;
+
+                if (!clientSession.IsConnected())
+                {
+                    break;
+                }
+
+                await clientSession.ReceiveDataAsync(_options.BufferSize);
             }
         }
     }

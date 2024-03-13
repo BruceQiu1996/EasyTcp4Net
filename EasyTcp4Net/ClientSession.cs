@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using CommunityToolkit.HighPerformance.Buffers;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -92,9 +94,64 @@ namespace EasyTcp4Net
             return true;
         }
 
-        internal async Task<Memory<byte>> ReceiveDataAsync() 
+        internal async Task<Memory<byte>> ReceiveDataAsync(int bufferSize)
         {
-            
+            MemoryOwner<byte> buffer = MemoryOwner<byte>.Allocate(bufferSize);
+            int readCount = 0;
+            if (IsSslAuthenticated)
+            {
+                readCount = await SslStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                readCount = await NetworkStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
+            }
+
+            if (readCount > 0)
+            {
+                return buffer.Memory;
+            }
+            else
+            {
+                throw new SocketException();
+            }
+        }
+
+        internal bool IsConnected()
+        {
+            if (_socket == null) return false;
+
+            try
+            {
+                var state = IPGlobalProperties.GetIPGlobalProperties()
+                    .GetActiveTcpConnections()
+                        .FirstOrDefault(x =>
+                            x.LocalEndPoint.Equals(_socket.LocalEndPoint)
+                            && x.RemoteEndPoint.Equals(_socket.RemoteEndPoint));
+
+                if (state == default(TcpConnectionInformation)
+                    || state.State == TcpState.Unknown
+                    || state.State == TcpState.FinWait1 //向服务端发起断开请求，进入fin1
+                    || state.State == TcpState.FinWait2 //收到服务器Ack,等待服务器，进入fin2
+                    || state.State == TcpState.Closed
+                    || state.State == TcpState.Closing
+                    || state.State == TcpState.CloseWait)
+                {
+                    return false;
+                }
+
+                if (_socket.Poll(0, SelectMode.SelectRead))
+                {
+                    byte[] buffer = new byte[1];
+                    return _socket.Receive(buffer, 0, buffer.Length, SocketFlags.Peek) > 0;
+                }
+
+                return false;
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
         }
 
         public void Dispose()
