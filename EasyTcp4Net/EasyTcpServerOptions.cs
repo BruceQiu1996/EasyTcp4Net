@@ -105,5 +105,31 @@ namespace EasyTcp4Net
         /// 日志工厂
         /// </summary>
         public ILoggerFactory LoggerFactory { get; set; }
+
+        /// <summary>
+        /// 是否开启空闲连接检查
+        /// 默认值: false
+        /// </summary>
+        public bool IdleSessionsCheck { get; set; } = true;
+        /// <summary>
+        /// 空闲连接检查时间阈值
+        /// 超过这段时间不活跃的连接将会被关闭
+        /// 默认值：300秒
+        /// 单位：毫秒
+        /// </summary>
+        private int _checkSessionsIdleMs { get; set; } = 300 * 1000;
+        public int CheckSessionsIdleMs
+        {
+            get => _checkSessionsIdleMs;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("CheckSessionsIdleMs must be greater then zero");
+                }
+
+                _checkSessionsIdleMs = value;
+            }
+        }
     }
 }

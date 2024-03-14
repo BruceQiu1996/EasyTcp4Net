@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using static System.Collections.Specialized.BitVector32;
 
 namespace EasyTcp4Net
 {
@@ -26,7 +28,7 @@ namespace EasyTcp4Net
         private readonly ConcurrentDictionary<string, ClientSession> _clients = new ConcurrentDictionary<string, ClientSession>();
 
         private Task _accetpClientsTask = null;
-
+        private Task _checkIdleSessionsTask = null;
         /// <summary>
         /// 创建一个Tcp服务对象
         /// </summary>
@@ -114,7 +116,11 @@ namespace EasyTcp4Net
                 _accetpClientsTask = Task.Factory
                     .StartNew(AcceptClientAsync, tokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
                 //开启客户端空闲检查
-                //TODO
+                if (_options.IdleSessionsCheck)
+                {
+                    _checkIdleSessionsTask = Task.Factory
+                        .StartNew(CheckIdleConnectionsAsync, tokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+                }
             }
             catch (Exception ex)
             {
@@ -155,7 +161,7 @@ namespace EasyTcp4Net
                     }
 
                     var newClientSocket = await _serverSocket.AcceptAsync(_acceptClientTokenSource.Token);
-                    clientSession = new ClientSession(newClientSocket);
+                    clientSession = new ClientSession(newClientSocket, _options.BufferSize);
                     if (_options.IsSsl)
                     {
                         CancellationTokenSource _sslTimeoutTokenSource = new CancellationTokenSource();
@@ -175,7 +181,8 @@ namespace EasyTcp4Net
                     }
 
                     _clients.TryAdd(clientSession.RemoteEndPoint.ToString(), clientSession);
-                    var _ = Task.Factory.StartNew(async () => 
+                    clientSession.Connected = true;
+                    var _ = Task.Factory.StartNew(async () =>
                     {
                         await ReceiveClientDataAsync(clientSession);
                     });
@@ -219,14 +226,13 @@ namespace EasyTcp4Net
                     }
 
                     OnReceivedData?.Invoke(clientSession, new ServerDataReceiveEventArgs(clientSession, data));
-                    clientSession.LastActiveTime = DateTime.UtcNow;
                 }
                 catch (SocketException ex)
                 {
                     _logger?.LogError($"Socket reeceive data error:{ex}");
                     break;
                 }
-                catch (TaskCanceledException ex) 
+                catch (TaskCanceledException ex)
                 {
                     _logger?.LogError($"Receive data task is canceled:{ex}");
                     break;
@@ -244,7 +250,95 @@ namespace EasyTcp4Net
             }
 
             clientSession.Dispose();
-            _clients.TryRemove(clientSession.RemoteEndPoint.ToString(),out var _);
+            _clients.TryRemove(clientSession.RemoteEndPoint.ToString(), out var _);
         }
+
+        /// <summary>
+        /// 检查空闲的客户端连接
+        /// </summary>
+        /// <returns></returns>
+        private async Task CheckIdleConnectionsAsync() 
+        {
+            while (!_lifecycleTokenSource.Token.IsCancellationRequested)
+            {
+                var expireTime = DateTime.UtcNow.AddMilliseconds(-1 * _options.CheckSessionsIdleMs);
+                foreach (var clientEntry in _clients)
+                {
+                    if (clientEntry.Value.LastActiveTime <= expireTime)
+                    {
+                        // 关闭空闲连接
+                        DisconnectClient(clientEntry.Value);
+                    }
+                }
+
+                await Task.Delay(1000).ConfigureAwait(false);
+            }
+        }
+
+        public void DisconnectClient(ClientSession clientSession)
+        {
+            if (!_clients.TryGetValue(clientSession.RemoteEndPoint.ToString(), out var temp))
+            {
+                _logger?.LogInformation("ClientSession does not exist when wanna DisconnectClient");
+            }
+
+            if (clientSession != null)
+            {
+                if (!clientSession._lifecycleTokenSource.IsCancellationRequested)
+                {
+                    clientSession._lifecycleTokenSource.Cancel();
+                }
+
+                clientSession.Dispose();
+            }
+        }
+
+        #region send data
+        public async Task SendAsync(string sessionId, byte[] data)
+        {
+            var sessions =
+                _clients.Where(x => x.Value.SessionId == sessionId);
+
+            await Parallel.ForEachAsync(sessions, _lifecycleTokenSource.Token, async (item, token) =>
+            {
+                if (!token.IsCancellationRequested)
+                {
+                    await item.Value.SendAsync(data);
+                }
+            }).ConfigureAwait(false);
+        }
+
+        public async Task SendAsync(IPEndPoint endpoint, byte[] data)
+        {
+            var result =
+                _clients.TryGetValue(endpoint.ToString(), out var client);
+
+            if (result)
+            {
+                await client.SendAsync(data);
+            }
+        }
+
+        public async Task SendAsync(string sessionId, Memory<byte> data)
+        {
+            await SendAsync(sessionId, data.ToArray());
+        }
+
+        public async Task SendAsync(ClientSession session, byte[] data)
+        {
+            if (_clients.Where(x => x.Value == session).Count() > 0)
+            {
+                await session.SendAsync(data);
+            }
+        }
+
+        public async Task SendAsync(ClientSession session, Memory<byte> data)
+        {
+            if (_clients.Where(x => x.Value == session).Count() > 0)
+            {
+                await session.SendAsync(data);
+            }
+        }
+        #endregion
     }
 }

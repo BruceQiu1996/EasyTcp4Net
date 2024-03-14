@@ -33,12 +33,16 @@ namespace EasyTcp4Net
         internal NetworkStream NetworkStream { get; private set; }
         internal SslStream SslStream { get; private set; }
         public bool IsDisposed { get; private set; }
+        public bool Connected { get; internal set; }
 
         private Socket _socket;
+        private int _bufferSize;
+        private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1); //发送数据的信号量
         internal readonly CancellationTokenSource _lifecycleTokenSource;
-        public ClientSession(Socket socket)
+        public ClientSession(Socket socket, int bufferSize)
         {
             _socket = socket;
+            _bufferSize = bufferSize;
             NetworkStream = new NetworkStream(socket);
             _lifecycleTokenSource = new CancellationTokenSource();
         }
@@ -111,25 +115,84 @@ namespace EasyTcp4Net
         internal async Task<Memory<byte>> ReceiveDataAsync(int bufferSize)
         {
             MemoryOwner<byte> buffer = MemoryOwner<byte>.Allocate(bufferSize);
-            int readCount = 0;
+            int readCount;
             if (IsSslAuthenticated)
             {
-                readCount = await SslStream.ReadAsync(buffer.Memory,
-                    _lifecycleTokenSource.Token).ConfigureAwait(false);
+                readCount = await SslStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token)
+                    .ConfigureAwait(false);
             }
             else
             {
-                readCount = await NetworkStream.ReadAsync(buffer.Memory,
-                    _lifecycleTokenSource.Token).ConfigureAwait(false);
+                readCount = await NetworkStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token)
+                    .ConfigureAwait(false);
             }
 
             if (readCount > 0)
             {
-                return buffer.Slice(0,readCount).Memory;
+                LastActiveTime = DateTime.UtcNow;
+                return buffer.Slice(0, readCount).Memory;
             }
             else
             {
                 throw new SocketException();
+            }
+        }
+
+        public async Task SendAsync(byte[] data)
+        {
+            if (data == null || data.Length < 1)
+                throw new ArgumentNullException(nameof(data));
+
+            await SendInternalAsync(data);
+        }
+
+        public async Task SendAsync(Memory<byte> data)
+        {
+            if (data.IsEmpty || data.Length < 1)
+                throw new ArgumentNullException(nameof(data));
+
+            await SendInternalAsync(data);
+        }
+
+        private async Task SendInternalAsync(Memory<byte> data)
+        {
+            if (!Connected)
+                return;
+
+            LastActiveTime = DateTime.UtcNow;
+            int bytesRemaining = data.Length;
+            int index = 0;
+
+            try
+            {
+                _sendLock.Wait();
+                while (bytesRemaining > 0)
+                {
+                    Memory<byte> needSendData = null;
+                    if (bytesRemaining >= _bufferSize)
+                    {
+                        needSendData = data.Slice(index, _bufferSize);
+                    }
+                    else
+                    {
+                        needSendData = data.Slice(index, bytesRemaining);
+                    }
+                    if (IsSslAuthenticated)
+                    {
+                        await SslStream.WriteAsync(needSendData, _lifecycleTokenSource.Token);
+                    }
+                    else
+                    {
+                        await NetworkStream.WriteAsync(needSendData, _lifecycleTokenSource.Token);
+                    }
+
+                    index += needSendData.Length;
+                    bytesRemaining -= needSendData.Length;
+                }
+            }
+            finally
+            {
+                _sendLock.Release();
             }
         }
 
@@ -156,13 +219,7 @@ namespace EasyTcp4Net
                     return false;
                 }
 
-                if (_socket.Poll(0, SelectMode.SelectRead))
-                {
-                    byte[] buffer = new byte[1];
-                    return _socket.Receive(buffer, 0, buffer.Length, SocketFlags.Peek) > 0;
-                }
-
-                return false;
+                return !((_socket.Poll(0, SelectMode.SelectRead) && (_socket.Available == 0)) || !_socket.Connected);
             }
             catch (SocketException)
             {

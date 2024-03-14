@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using Microsoft.Extensions.Logging;
-using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
@@ -16,7 +15,7 @@ namespace EasyTcp4Net
     {
         public bool IsConnected { get; private set; } //客户端是否已经连接上服务
         public event EventHandler<ClientDataReceiveEventArgs> OnReceivedData;
-
+        public event EventHandler<ClientSideDisConnectEventArgs> OnDisConnected;
         private readonly IPAddress _serverIpAddress = null; //服务端的ip地址
         private readonly Socket _socket;  //客户端本地套接字
         private readonly EasyTcpClientOptions _options = new();//客户端总配置
@@ -154,8 +153,9 @@ namespace EasyTcp4Net
             {
                 throw new TimeoutException("Connect remote host timeout!");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger?.LogError(ex.ToString());
                 throw;
             }
             finally
@@ -260,7 +260,6 @@ namespace EasyTcp4Net
                 throw new ArgumentNullException(nameof(data));
 
             if (!IsConnected) throw new InvalidOperationException("Connection is disconnected");
-
             await SendInternalAsync(data);
         }
 
@@ -270,7 +269,6 @@ namespace EasyTcp4Net
                 throw new ArgumentNullException(nameof(data));
 
             if (!IsConnected) throw new InvalidOperationException("Connection is disconnected");
-
             await SendInternalAsync(data);
         }
 
@@ -305,6 +303,25 @@ namespace EasyTcp4Net
                     index += needSendData.Length;
                     bytesRemaining -= needSendData.Length;
                 }
+            }
+            catch (IOException ex)
+            {
+                OnDisConnected?.Invoke(this,
+                    new ClientSideDisConnectEventArgs(DisConnectReason.ServerDown));
+                _logger?.LogError(ex.ToString());
+
+                throw;
+            }
+            catch (Exception ex) 
+            {
+                if (ex is TaskCanceledException || ex is OperationCanceledException) 
+                {
+                    _logger?.LogError("Send message operation was canceled.");
+                }
+
+                _logger?.LogError(ex.ToString());
+
+                throw;
             }
             finally
             {
