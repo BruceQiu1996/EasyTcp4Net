@@ -10,6 +10,7 @@ namespace EasyTcp4Net
     public class EasyTcpServer
     {
         public bool IsListening { get; private set; } //是否正在监听客户端连接中
+        public event EventHandler<ServerDataReceiveEventArgs> OnReceivedData;
 
         private readonly IPAddress _ipAddress = null; //本地监听的ip地址
         private readonly ushort _port = 0; //本地监听端口
@@ -22,8 +23,7 @@ namespace EasyTcp4Net
         private readonly IPEndPoint _localEndPoint; //服务端本地启动的终结点
         private readonly ILogger<EasyTcpServer> _logger; //日志对象
 
-        private readonly ConcurrentDictionary<string, ClientSession> _clients
-            = new ConcurrentDictionary<string, ClientSession>();
+        private readonly ConcurrentDictionary<string, ClientSession> _clients = new ConcurrentDictionary<string, ClientSession>();
 
         private Task _accetpClientsTask = null;
 
@@ -38,6 +38,9 @@ namespace EasyTcp4Net
         /// </param>
         public EasyTcpServer(ushort port, string host = null)
         {
+            if (port < 0 || port > 65535)
+                throw new InvalidDataException("Unexcepted port number!");
+
             if (string.IsNullOrEmpty(host) || host.Trim() == "*")
             {
                 _ipAddress = IPAddress.Any;
@@ -130,6 +133,11 @@ namespace EasyTcp4Net
             }
         }
 
+        /// <summary>
+        /// 开启接收客户端的线程
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">已经取消或者没有启动监听后产生的异常</exception>
         private async Task AcceptClientAsync()
         {
             while (!_acceptClientTokenSource.Token.IsCancellationRequested)
@@ -167,9 +175,9 @@ namespace EasyTcp4Net
                     }
 
                     _clients.TryAdd(clientSession.RemoteEndPoint.ToString(), clientSession);
-                    Task.Factory.StartNew(() =>
+                    var _ = Task.Factory.StartNew(async () => 
                     {
-
+                        await ReceiveClientDataAsync(clientSession);
                     });
                     _logger?.LogInformation($"{clientSession.RemoteEndPoint}：connected.");
                 }
@@ -184,6 +192,11 @@ namespace EasyTcp4Net
             }
         }
 
+        /// <summary>
+        /// 接收客户端信息
+        /// </summary>
+        /// <param name="clientSession">客户端会话对象</param>
+        /// <returns></returns>
         private async Task ReceiveClientDataAsync(ClientSession clientSession)
         {
             while (!clientSession._lifecycleTokenSource.Token.IsCancellationRequested)
@@ -191,13 +204,47 @@ namespace EasyTcp4Net
                 if (clientSession.IsDisposed)
                     break;
 
-                if (!clientSession.IsConnected())
+                try
                 {
+                    if (!clientSession.IsConnected())
+                    {
+                        break;
+                    }
+
+                    var data = await clientSession.ReceiveDataAsync(_options.BufferSize);
+                    if (data.IsEmpty)
+                    {
+                        await Task.Delay(20).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    OnReceivedData?.Invoke(clientSession, new ServerDataReceiveEventArgs(clientSession, data));
+                    clientSession.LastActiveTime = DateTime.UtcNow;
+                }
+                catch (SocketException ex)
+                {
+                    _logger?.LogError($"Socket reeceive data error:{ex}");
                     break;
                 }
-
-                await clientSession.ReceiveDataAsync(_options.BufferSize);
+                catch (TaskCanceledException ex) 
+                {
+                    _logger?.LogError($"Receive data task is canceled:{ex}");
+                    break;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _logger?.LogError($"Receive data task is canceled:{ex}");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex.ToString());
+                    break;
+                }
             }
+
+            clientSession.Dispose();
+            _clients.TryRemove(clientSession.RemoteEndPoint.ToString(),out var _);
         }
     }
 }

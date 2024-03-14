@@ -13,6 +13,13 @@ namespace EasyTcp4Net
     public class ClientSession : IDisposable
     {
         /// <summary>
+        /// 会话id
+        /// 添加了身份认证后，可以讲该值绑定账号身份唯一标识
+        /// 可以知道session属于哪个用户
+        /// 多端登录可以知道哪些session属于同一用户
+        /// </summary>
+        public string SessionId { get; set; } = Guid.NewGuid().ToString();
+        /// <summary>
         /// 对于服务端来说，远程终结点就是客户端的本地套接字终结点
         /// </summary>
         public IPEndPoint RemoteEndPoint => _socket == null ? null : _socket.RemoteEndPoint as IPEndPoint;
@@ -22,8 +29,9 @@ namespace EasyTcp4Net
         public IPEndPoint LocalEndPoint => _socket == null ? null : _socket.LocalEndPoint as IPEndPoint;
         public bool IsSslAuthenticated { get; internal set; } = false;
         public DateTime? SslAuthenticatedTime { get; internal set; } = null;
-        public NetworkStream NetworkStream { get; private set; }
-        public SslStream SslStream { get; private set; }
+        public DateTime LastActiveTime { get; set; } = DateTime.UtcNow;
+        internal NetworkStream NetworkStream { get; private set; }
+        internal SslStream SslStream { get; private set; }
         public bool IsDisposed { get; private set; }
 
         private Socket _socket;
@@ -94,22 +102,30 @@ namespace EasyTcp4Net
             return true;
         }
 
+        /// <summary>
+        /// 读取数据
+        /// </summary>
+        /// <param name="bufferSize">缓冲区大小</param>
+        /// <returns></returns>
+        /// <exception cref="SocketException">读取到长度为0的数据，默认为断开了</exception>
         internal async Task<Memory<byte>> ReceiveDataAsync(int bufferSize)
         {
             MemoryOwner<byte> buffer = MemoryOwner<byte>.Allocate(bufferSize);
             int readCount = 0;
             if (IsSslAuthenticated)
             {
-                readCount = await SslStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
+                readCount = await SslStream.ReadAsync(buffer.Memory,
+                    _lifecycleTokenSource.Token).ConfigureAwait(false);
             }
             else
             {
-                readCount = await NetworkStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
+                readCount = await NetworkStream.ReadAsync(buffer.Memory,
+                    _lifecycleTokenSource.Token).ConfigureAwait(false);
             }
 
             if (readCount > 0)
             {
-                return buffer.Memory;
+                return buffer.Slice(0,readCount).Memory;
             }
             else
             {
@@ -156,7 +172,21 @@ namespace EasyTcp4Net
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            if (!IsDisposed)
+            {
+                InternalDispose();
+            }
+        }
+
+        private void InternalDispose()
+        {
+            _lifecycleTokenSource?.Cancel();
+            _socket?.Dispose();
+            NetworkStream?.Close();
+            NetworkStream?.Dispose();
+            SslStream?.Close();
+            SslStream?.Dispose();
+            IsDisposed = true;
         }
     }
 }

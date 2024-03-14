@@ -5,9 +5,9 @@ namespace EasyTcp4Net
     /// <summary>
     /// tcp server配置类
     /// </summary>
-    public class EasyTcpServerOptions
+    public class EasyTcpClientOptions
     {
-        public EasyTcpServerOptions() { }
+        public EasyTcpClientOptions() { }
 
         /// <summary>
         /// 是否不使用 Nagle's算法
@@ -18,7 +18,7 @@ namespace EasyTcp4Net
         /// <summary>
         /// 流数据缓冲区大小
         /// 单位：字节
-        /// 默认值：1kb
+        /// 默认值：2kb
         /// </summary>
         private int _bufferSize = 2 * 1024;
         public int BufferSize
@@ -36,40 +36,62 @@ namespace EasyTcp4Net
         }
 
         /// <summary>
-        /// 最大连接数
-        /// 默认值：无数量限制
+        /// 连接超时时间
+        /// 单位：毫秒
+        /// 默认值：30秒
         /// </summary>
-        private int? _connectionsLimit = null;
-        public int? ConnectionsLimit
+        private int _connectionTimeout = 30 * 1000;
+        public int ConnectionTimeout
         {
-            get => _connectionsLimit;
+            get => _connectionTimeout;
             set
             {
-                if (value != null && value.Value <= 0)
+                if (value <= 0)
                 {
-                    throw new ArgumentException("ConnectionsLimit must be greater then zero");
+                    throw new ArgumentException("ConnectionTimeout must be greater then zero");
                 }
 
-                _connectionsLimit = value;
+                _connectionTimeout = value;
             }
         }
 
         /// <summary>
         /// 连接等待/挂起连接数量
-        /// 默认值：0
+        /// 默认值：10秒
+        /// 单位：毫秒
         /// </summary>
-        private int? _backlogCount = null;
-        public int? BacklogCount
+        private int _readTimeout = 10 * 1000;
+        public int ReadTimeout
         {
-            get => _backlogCount;
+            get => _readTimeout;
             set
             {
-                if (value != null && value.Value <= 0)
+                if (_readTimeout <=0)
                 {
-                    throw new ArgumentException("BacklogCount must be greater then zero");
+                    throw new ArgumentException("ReadTimeout must be greater then zero");
                 }
 
-                _backlogCount = value;
+                _readTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// 连接等待/挂起连接数量
+        /// 默认值：10秒
+        /// 单位：毫秒
+        /// </summary>
+        private int _writeTimeout = 10 * 1000;
+        public int WriteTimeout
+        {
+            get => _writeTimeout;
+            set
+            {
+                if (_writeTimeout <= 0)
+                {
+                    throw new ArgumentException("WriteTimeout must be greater then zero");
+                }
+
+                _writeTimeout = value;
             }
         }
 
