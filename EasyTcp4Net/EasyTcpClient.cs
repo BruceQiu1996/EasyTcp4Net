@@ -91,6 +91,8 @@ namespace EasyTcp4Net
                     _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
                 }
             }
+
+            if (_options.KeepAlive) _socket.SetKeepAlive(_options.KeepAliveIntvl,_options.KeepAliveTime,_options.KeepAliveProbes);
             _socket.NoDelay = _options.NoDelay;
             _logger = options.LoggerFactory?.CreateLogger<EasyTcpClient>();
         }
@@ -312,9 +314,9 @@ namespace EasyTcp4Net
 
                 throw;
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                if (ex is TaskCanceledException || ex is OperationCanceledException) 
+                if (ex is TaskCanceledException || ex is OperationCanceledException)
                 {
                     _logger?.LogError("Send message operation was canceled.");
                 }

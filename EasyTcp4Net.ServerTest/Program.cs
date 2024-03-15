@@ -8,6 +8,7 @@
             EasyTcpServer easyTcpServer = new EasyTcpServer(7001, new EasyTcpServerOptions()
             {
                 IdleSessionsCheck = false,
+                KeepAlive = true,
                 CheckSessionsIdleMs = 10 * 1000
             });
             easyTcpServer.StartListen();

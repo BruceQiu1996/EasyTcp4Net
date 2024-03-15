@@ -1,11 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using static System.Collections.Specialized.BitVector32;
 
 namespace EasyTcp4Net
 {
@@ -82,6 +80,7 @@ namespace EasyTcp4Net
                     _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
                 }
             }
+            if (_options.KeepAlive) _serverSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
             _serverSocket.NoDelay = _options.NoDelay;
             _logger = options.LoggerFactory?.CreateLogger<EasyTcpServer>();
         }
@@ -179,6 +178,8 @@ namespace EasyTcp4Net
                             continue;
                         }
                     }
+
+                    if (_options.KeepAlive) newClientSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
 
                     _clients.TryAdd(clientSession.RemoteEndPoint.ToString(), clientSession);
                     clientSession.Connected = true;

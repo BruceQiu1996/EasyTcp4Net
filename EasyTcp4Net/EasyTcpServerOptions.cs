@@ -15,12 +15,13 @@ namespace EasyTcp4Net
         /// 避免了过多的小报文的 过大TCP头所浪费的带宽
         /// </summary>
         public bool NoDelay { get; set; } = true;
+        
+        private int _bufferSize = 2 * 1024;
         /// <summary>
         /// 流数据缓冲区大小
         /// 单位：字节
         /// 默认值：1kb
         /// </summary>
-        private int _bufferSize = 2 * 1024;
         public int BufferSize
         {
             get => _bufferSize;
@@ -34,12 +35,13 @@ namespace EasyTcp4Net
                 _bufferSize = value;
             }
         }
+       
+        private int? _connectionsLimit = null;
 
         /// <summary>
         /// 最大连接数
         /// 默认值：无数量限制
         /// </summary>
-        private int? _connectionsLimit = null;
         public int? ConnectionsLimit
         {
             get => _connectionsLimit;
@@ -111,13 +113,14 @@ namespace EasyTcp4Net
         /// 默认值: false
         /// </summary>
         public bool IdleSessionsCheck { get; set; } = true;
+        
+        private int _checkSessionsIdleMs { get; set; } = 300 * 1000;
         /// <summary>
         /// 空闲连接检查时间阈值
         /// 超过这段时间不活跃的连接将会被关闭
         /// 默认值：300秒
         /// 单位：毫秒
         /// </summary>
-        private int _checkSessionsIdleMs { get; set; } = 300 * 1000;
         public int CheckSessionsIdleMs
         {
             get => _checkSessionsIdleMs;
@@ -131,5 +134,74 @@ namespace EasyTcp4Net
                 _checkSessionsIdleMs = value;
             }
         }
+
+        /// <summary>
+        /// 是否启动操作系统的tcp keepalive机制
+        /// 不同操作系统实现keepalive机制并不相同
+        /// </summary>
+        public bool KeepAlive { get; set; } = false;
+
+        private int _keepAliveTime = 3600;
+        /// <summary>
+        ///  KeepAlive的空闲时长，或者说每次正常发送心跳的周期，默认值为3600s（1小时）
+        /// </summary>
+        public int KeepAliveTime
+        {
+            get => _keepAliveTime;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveTime must be greater then zero");
+                }
+
+                _keepAliveTime = value;
+            }
+        }
+
+        private int _keepAliveProbes = 9;
+        /// <summary>
+        /// KeepAlive之后设置最大允许发送保活探测包的次数，到达此次数后直接放弃尝试，并关闭连接
+        /// 默认值：9次
+        /// </summary>
+        public int KeepAliveProbes
+        {
+            get => _keepAliveProbes;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveProbes must be greater then zero");
+                }
+
+                _keepAliveProbes = value;
+            }
+        }
+
+        private int _keepAliveIntvl = 60;
+        /// <summary>
+        /// 没有接收到对方确认，继续发送KeepAlive的发送频率，默认值为60s
+        /// 单位：秒
+        /// 默认值 60（1分钟）
+        /// </summary>
+        public int KeepAliveIntvl
+        {
+            get => _keepAliveIntvl;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveIntvl must be greater then zero");
+                }
+
+                _keepAliveIntvl = value;
+            }
+        }
+
+        /// <summary>
+        /// 数据大小端
+        /// 默认值：true(小端模式)
+        /// </summary>
+        public bool IsLittleEndian { get; set; } = true;
     }
 }

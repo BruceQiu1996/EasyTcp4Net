@@ -3,11 +3,11 @@
     public class ServerDataReceiveEventArgs
     {
         public ClientSession Session { get; private set; }
-        public byte[] Data { get; set; }
-        public ServerDataReceiveEventArgs(ClientSession clientSession, Memory<byte> data)
+        public Packet Data { get; set; }
+        public ServerDataReceiveEventArgs(ClientSession clientSession, Packet packet)
         {
             Session = clientSession;
-            Data = data.ToArray();
+            Data = packet;
         }
     }
 }

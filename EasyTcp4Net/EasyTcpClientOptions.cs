@@ -66,7 +66,7 @@ namespace EasyTcp4Net
             get => _readTimeout;
             set
             {
-                if (_readTimeout <=0)
+                if (value <= 0)
                 {
                     throw new ArgumentException("ReadTimeout must be greater then zero");
                 }
@@ -86,7 +86,7 @@ namespace EasyTcp4Net
             get => _writeTimeout;
             set
             {
-                if (_writeTimeout <= 0)
+                if (value <= 0)
                 {
                     throw new ArgumentException("WriteTimeout must be greater then zero");
                 }
@@ -127,5 +127,74 @@ namespace EasyTcp4Net
         /// 日志工厂
         /// </summary>
         public ILoggerFactory LoggerFactory { get; set; }
+
+        /// <summary>
+        /// 是否启动操作系统的tcp keepalive机制
+        /// 不同操作系统实现keepalive机制并不相同
+        /// </summary>
+        public bool KeepAlive { get; set; } = false;
+
+        private int _keepAliveTime = 3600;
+        /// <summary>
+        ///  KeepAlive的空闲时长，或者说每次正常发送心跳的周期，默认值为3600s（1小时）
+        /// </summary>
+        public int KeepAliveTime
+        {
+            get => _keepAliveTime;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveTime must be greater then zero");
+                }
+
+                _keepAliveTime = value;
+            }
+        }
+
+        private int _keepAliveProbes = 9;
+        /// <summary>
+        /// KeepAlive之后设置最大允许发送保活探测包的次数，到达此次数后直接放弃尝试，并关闭连接
+        /// 默认值：9次
+        /// </summary>
+        public int KeepAliveProbes
+        {
+            get => _keepAliveProbes;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveProbes must be greater then zero");
+                }
+
+                _keepAliveProbes = value;
+            }
+        }
+
+        private int _keepAliveIntvl = 60;
+        /// <summary>
+        /// 没有接收到对方确认，继续发送KeepAlive的发送频率，默认值为60s
+        /// 单位：秒
+        /// 默认值 60（1分钟）
+        /// </summary>
+        public int KeepAliveIntvl
+        {
+            get => _keepAliveIntvl;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("KeepAliveIntvl must be greater then zero");
+                }
+
+                _keepAliveIntvl = value;
+            }
+        }
+
+        /// <summary>
+        /// 数据大小端
+        /// 默认值：true(小端模式)
+        /// </summary>
+        public bool IsLittleEndian { get; set; } = true;
     }
 }

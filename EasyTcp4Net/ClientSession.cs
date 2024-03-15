@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 namespace EasyTcp4Net
@@ -196,35 +197,13 @@ namespace EasyTcp4Net
             }
         }
 
+        /// <summary>
+        /// 判断客户端的会话是否连接着
+        /// </summary>
+        /// <returns>是否连接，true表示已连接，false表示未连接</returns>
         internal bool IsConnected()
         {
-            if (_socket == null) return false;
-
-            try
-            {
-                var state = IPGlobalProperties.GetIPGlobalProperties()
-                    .GetActiveTcpConnections()
-                        .FirstOrDefault(x =>
-                            x.LocalEndPoint.Equals(_socket.LocalEndPoint)
-                            && x.RemoteEndPoint.Equals(_socket.RemoteEndPoint));
-
-                if (state == default(TcpConnectionInformation)
-                    || state.State == TcpState.Unknown
-                    || state.State == TcpState.FinWait1 //向服务端发起断开请求，进入fin1
-                    || state.State == TcpState.FinWait2 //收到服务器Ack,等待服务器，进入fin2
-                    || state.State == TcpState.Closed
-                    || state.State == TcpState.Closing
-                    || state.State == TcpState.CloseWait)
-                {
-                    return false;
-                }
-
-                return !((_socket.Poll(0, SelectMode.SelectRead) && (_socket.Available == 0)) || !_socket.Connected);
-            }
-            catch (SocketException)
-            {
-                return false;
-            }
+            return _socket.CheckConnect();
         }
 
         public void Dispose()
