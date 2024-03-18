@@ -4,6 +4,6 @@ namespace EasyTcp4Net
 {
     public interface IPackageFilter
     {
-        ReadOnlySequence<byte> ResolvePackage(ReadOnlySequence<byte> package);
+        ReadOnlySequence<byte> ResolvePackage(ref ReadOnlySequence<byte> sequence);
     }
 }

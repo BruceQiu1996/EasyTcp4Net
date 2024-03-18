@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
@@ -35,17 +37,23 @@ namespace EasyTcp4Net
         internal SslStream SslStream { get; private set; }
         public bool IsDisposed { get; private set; }
         public bool Connected { get; internal set; }
+        public PipeReader PipeReader => _pipe.Reader;
+        public PipeWriter PipeWriter => _pipe.Writer;
 
+        private Task _processDataTask;
         private Socket _socket;
+        private Pipe _pipe;
         private int _bufferSize;
         private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1); //发送数据的信号量
         internal readonly CancellationTokenSource _lifecycleTokenSource;
         public ClientSession(Socket socket, int bufferSize)
         {
             _socket = socket;
+            _pipe = new Pipe();
             _bufferSize = bufferSize;
             NetworkStream = new NetworkStream(socket);
             _lifecycleTokenSource = new CancellationTokenSource();
+            _processDataTask = Task.Factory.StartNew(ReadPipeAsync, _lifecycleTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
 
         /// <summary>
@@ -113,30 +121,80 @@ namespace EasyTcp4Net
         /// <param name="bufferSize">缓冲区大小</param>
         /// <returns></returns>
         /// <exception cref="SocketException">读取到长度为0的数据，默认为断开了</exception>
-        internal async Task<Memory<byte>> ReceiveDataAsync(int bufferSize)
+        internal async Task ReceiveDataAsync()
         {
-            MemoryOwner<byte> buffer = MemoryOwner<byte>.Allocate(bufferSize);
-            int readCount;
-            if (IsSslAuthenticated)
+            while (!_lifecycleTokenSource.Token.IsCancellationRequested)
             {
-                readCount = await SslStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                readCount = await NetworkStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token)
-                    .ConfigureAwait(false);
+                if (IsDisposed)
+                    break;
+
+                try
+                {
+                    if (!IsConnected())
+                    {
+                        break;
+                    }
+
+                    Memory<byte> buffer = PipeWriter.GetMemory(_bufferSize);
+                    int readCount;
+                    if (IsSslAuthenticated)
+                    {
+                        readCount = await SslStream.ReadAsync(buffer, _lifecycleTokenSource.Token)
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        readCount = await NetworkStream.ReadAsync(buffer, _lifecycleTokenSource.Token)
+                            .ConfigureAwait(false);
+                    }
+
+                    if (readCount > 0)
+                    {
+                        LastActiveTime = DateTime.UtcNow;
+                        PipeWriter.Advance(readCount);
+                    }
+                    else
+                    {
+                        throw new SocketException();
+                    }
+
+                    FlushResult result = await PipeWriter.FlushAsync().ConfigureAwait(false);
+                    if (result.IsCompleted)
+                    {
+                        break;
+                    }
+                }
+                catch (Exception) 
+                {
+                    throw;
+                }
             }
 
-            if (readCount > 0)
+            PipeWriter.Complete();
+        }
+
+        internal async Task ReadPipeAsync()
+        {
+            int index = 0;
+            FixedHeaderPackageFilter fixedHeaderPackageFilter = new FixedHeaderPackageFilter(7,3,4);
+            while (!_lifecycleTokenSource.Token.IsCancellationRequested)
             {
-                LastActiveTime = DateTime.UtcNow;
-                return buffer.Slice(0, readCount).Memory;
+                ReadResult result = await PipeReader.ReadAsync();
+                ReadOnlySequence<byte> buffer = result.Buffer;
+                ReadOnlySequence<byte> data;
+                do
+                {
+                    data = fixedHeaderPackageFilter.ResolvePackage(ref buffer);
+                    if (!data.IsEmpty) 
+                    {
+                        Console.WriteLine(++index);
+                    }
+                }
+                while (!data.IsEmpty);
+                PipeReader.AdvanceTo(buffer.Start, buffer.End);
             }
-            else
-            {
-                throw new SocketException();
-            }
+
+            PipeReader.Complete();
         }
 
         public async Task SendAsync(byte[] data)

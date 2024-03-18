@@ -185,7 +185,7 @@ namespace EasyTcp4Net
                     var data = await DataReadAsync().ConfigureAwait(false);
                     if (!data.IsEmpty)
                     {
-                        OnReceivedData?.Invoke(this, new ClientDataReceiveEventArgs(data));
+                        //OnReceivedData?.Invoke(this, new ClientDataReceiveEventArgs(data));
                     }
                     else
                     {

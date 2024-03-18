@@ -16,7 +16,7 @@ namespace EasyTcp4Net
         /// </summary>
         public bool NoDelay { get; set; } = true;
         
-        private int _bufferSize = 2 * 1024;
+        private int _bufferSize = 300;
         /// <summary>
         /// 流数据缓冲区大小
         /// 单位：字节

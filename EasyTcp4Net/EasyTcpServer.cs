@@ -207,47 +207,25 @@ namespace EasyTcp4Net
         /// <returns></returns>
         private async Task ReceiveClientDataAsync(ClientSession clientSession)
         {
-            while (!clientSession._lifecycleTokenSource.Token.IsCancellationRequested)
+            try
             {
-                if (clientSession.IsDisposed)
-                    break;
-
-                try
-                {
-                    if (!clientSession.IsConnected())
-                    {
-                        break;
-                    }
-
-                    var data = await clientSession.ReceiveDataAsync(_options.BufferSize);
-                    if (data.IsEmpty)
-                    {
-                        await Task.Delay(20).ConfigureAwait(false);
-                        continue;
-                    }
-
-                    OnReceivedData?.Invoke(clientSession, new ServerDataReceiveEventArgs(clientSession, data));
-                }
-                catch (SocketException ex)
-                {
-                    _logger?.LogError($"Socket reeceive data error:{ex}");
-                    break;
-                }
-                catch (TaskCanceledException ex)
-                {
-                    _logger?.LogError($"Receive data task is canceled:{ex}");
-                    break;
-                }
-                catch (OperationCanceledException ex)
-                {
-                    _logger?.LogError($"Receive data task is canceled:{ex}");
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex.ToString());
-                    break;
-                }
+                await clientSession.ReceiveDataAsync();
+            }
+            catch (SocketException ex)
+            {
+                _logger?.LogError($"Socket reeceive data error:{ex}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger?.LogError($"Receive data task is canceled:{ex}");
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger?.LogError($"Receive data task is canceled:{ex}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex.ToString());
             }
 
             clientSession.Dispose();
