@@ -27,7 +27,6 @@ namespace EasyTcp4Net
 
         private Task _accetpClientsTask = null;
         private Task _checkIdleSessionsTask = null;
-        private IPackageFilter _sendPackageFilter = null; //发送数据包的拦截处理器
         private IPackageFilter _receivePackageFilter = null; //接收数据包的拦截处理器
         /// <summary>
         /// 创建一个Tcp服务对象
@@ -153,18 +152,6 @@ namespace EasyTcp4Net
         }
 
         /// <summary>
-        /// 添加发送数据的过滤处理器
-        /// </summary>
-        /// <param name="filters"></param>
-        public void SetSendFilter(IPackageFilter filter)
-        {
-            if (filter == null)
-                return;
-
-            _sendPackageFilter = filter;
-        }
-
-        /// <summary>
         /// 开启接收客户端的线程
         /// </summary>
         /// <returns></returns>
@@ -186,7 +173,7 @@ namespace EasyTcp4Net
                     }
 
                     var newClientSocket = await _serverSocket.AcceptAsync(_acceptClientTokenSource.Token);
-                    clientSession = new ClientSession(newClientSocket, _options.BufferSize, _receivePackageFilter, _sendPackageFilter, OnReceivedData);
+                    clientSession = new ClientSession(newClientSocket, _options.BufferSize, _receivePackageFilter, OnReceivedData);
                     if (_options.IsSsl)
                     {
                         CancellationTokenSource _sslTimeoutTokenSource = new CancellationTokenSource();

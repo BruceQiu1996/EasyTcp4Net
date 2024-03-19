@@ -42,7 +42,6 @@ namespace EasyTcp4Net
         private Pipe _pipe;
         private int _bufferSize;
         private event EventHandler<ServerDataReceiveEventArgs> _onReceivedData;
-        private readonly IPackageFilter _sendPackageFilter; //发送数据包的拦截处理器
         private readonly IPackageFilter _receivePackageFilter; //接收数据包的拦截处理器
         private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1); //发送数据的信号量
         internal readonly CancellationTokenSource _lifecycleTokenSource;
@@ -54,14 +53,13 @@ namespace EasyTcp4Net
         /// <param name="bufferSize">读写缓冲区</param>
         /// <param name="receiveFilters">接收数据的过滤处理器</param>
         /// <param name="sendFilters">发送数据的过滤处理器</param>
-        public ClientSession(Socket socket, int bufferSize, IPackageFilter receiveFilter, IPackageFilter sendFilter, EventHandler<ServerDataReceiveEventArgs> onReceivedData)
+        public ClientSession(Socket socket, int bufferSize, IPackageFilter receiveFilter, EventHandler<ServerDataReceiveEventArgs> onReceivedData)
         {
             _socket = socket;
-            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold:1024 * 1024 * 4));
+            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 1024 * 1024 * 4));
             _bufferSize = bufferSize;
             NetworkStream = new NetworkStream(socket);
             _lifecycleTokenSource = new CancellationTokenSource();
-            _sendPackageFilter = sendFilter;
             _receivePackageFilter = receiveFilter;
             _onReceivedData = onReceivedData;
             _processDataTask = Task.Factory.StartNew(ReadPipeAsync, _lifecycleTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
@@ -174,7 +172,7 @@ namespace EasyTcp4Net
                         break;
                     }
                 }
-                catch (Exception) 
+                catch (Exception)
                 {
                     throw;
                 }
@@ -196,7 +194,7 @@ namespace EasyTcp4Net
                     {
                         data = _receivePackageFilter.ResolvePackage(ref buffer);
                     }
-                    else 
+                    else
                     {
                         data = buffer;
                         buffer = buffer.Slice(data.Length);

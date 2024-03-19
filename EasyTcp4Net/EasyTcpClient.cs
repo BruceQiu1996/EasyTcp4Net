@@ -1,5 +1,6 @@
-﻿using CommunityToolkit.HighPerformance.Buffers;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
@@ -30,6 +31,10 @@ namespace EasyTcp4Net
         private Task _dataReceiveTask = null;
         private NetworkStream _networkStream;
         private SslStream _sslStream;
+        private Pipe _pipe;
+        private PipeReader _pipeReader => _pipe.Reader;
+        private PipeWriter _pipeWriter => _pipe.Writer;
+        private IPackageFilter _receivePackageFilter = null; //接收数据包的拦截处理器
 
         /// <summary>
         /// 创建一个Tcp服务对象
@@ -62,6 +67,7 @@ namespace EasyTcp4Net
                     tempAddress : Dns.GetHostEntry(serverHost).AddressList[0];
             }
             _socket = new Socket(IPAddress.Any.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 1024 * 1024 * 4));
             _localEndPoint = new IPEndPoint(IPAddress.Any, 0);
             _remoteEndPoint = new IPEndPoint(_serverIpAddress, serverPort);
             _lifecycleTokenSource = new CancellationTokenSource();
@@ -142,8 +148,6 @@ namespace EasyTcp4Net
                     {
                         throw new InvalidOperationException("SSL authenticated faild!");
                     }
-
-                    //TODO keepalive
                 }
             }
             catch (TaskCanceledException)
@@ -181,14 +185,36 @@ namespace EasyTcp4Net
             {
                 try
                 {
-                    var data = await DataReadAsync().ConfigureAwait(false);
-                    if (!data.IsEmpty)
+                    Memory<byte> buffer = _pipeWriter.GetMemory(_options.BufferSize);
+                    int readCount = 0;
+                    if (_options.IsSsl)
                     {
-                        //OnReceivedData?.Invoke(this, new ClientDataReceiveEventArgs(data));
+                        readCount = await _sslStream.ReadAsync(buffer, _lifecycleTokenSource.Token).ConfigureAwait(false);
                     }
                     else
                     {
-                        await Task.Delay(20);
+                        readCount = await _networkStream.ReadAsync(buffer, _lifecycleTokenSource.Token).ConfigureAwait(false);
+                    }
+
+                    if (readCount > 0)
+                    {
+                        var data = buffer.Slice(0, readCount);
+                        _pipeWriter.Advance(readCount);
+                    }
+                    else
+                    {
+                        if (IsDisconnect())
+                        {
+                            DisConnect();
+                        }
+
+                        throw new SocketException();
+                    }
+
+                    FlushResult result = await _pipeWriter.FlushAsync().ConfigureAwait(false);
+                    if (result.IsCompleted)
+                    {
+                        break;
                     }
                 }
                 catch (IOException)
@@ -206,53 +232,52 @@ namespace EasyTcp4Net
                     //TODO log
                     break;
                 }
-
             }
+
+            _pipeWriter.Complete();
+        }
+
+        internal async Task ReadPipeAsync()
+        {
+            while (!_lifecycleTokenSource.Token.IsCancellationRequested)
+            {
+                ReadResult result = await _pipeReader.ReadAsync();
+                ReadOnlySequence<byte> buffer = result.Buffer;
+                ReadOnlySequence<byte> data;
+                do
+                {
+                    if (_receivePackageFilter != null)
+                    {
+                        data = _receivePackageFilter.ResolvePackage(ref buffer);
+                    }
+                    else
+                    {
+                        data = buffer;
+                        buffer = buffer.Slice(data.Length);
+                    }
+
+                    if (!data.IsEmpty)
+                    {
+                        OnReceivedData?.Invoke(this, new ClientDataReceiveEventArgs(data.ToArray()));
+                    }
+                }
+                while (!data.IsEmpty);
+                _pipeReader.AdvanceTo(buffer.Start);
+            }
+
+            _pipeReader.Complete();
         }
 
         /// <summary>
-        /// 读取数据
+        /// 添加接收数据的过滤处理器
         /// </summary>
-        /// <returns></returns>
-        private async Task<Memory<byte>> DataReadAsync()
+        /// <param name="filters"></param>
+        public void SetReceiveFilter(IPackageFilter filter)
         {
-            try
-            {
-                MemoryOwner<byte> buffer = MemoryOwner<byte>.Allocate(_options.BufferSize);
-                int readCount = 0;
-                if (_options.IsSsl)
-                {
-                    readCount = await _sslStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
-                }
-                else
-                {
-                    readCount = await _networkStream.ReadAsync(buffer.Memory, _lifecycleTokenSource.Token).ConfigureAwait(false);
-                }
+            if (filter == null)
+                return;
 
-                if (readCount > 0)
-                {
-                    var data = buffer.Slice(0, readCount);
-                    return data.Memory;
-                }
-                else
-                {
-                    if (IsDisconnect())
-                    {
-                        DisConnect();
-                    }
-
-                    throw new SocketException();
-                }
-            }
-            catch (SocketException)
-            {
-                _logger?.LogError("Connection was disconnected.");
-                throw;
-            }
-            catch (IOException)
-            {
-                throw;
-            }
+            _receivePackageFilter = filter;
         }
 
         public async Task SendAsync(byte[] data)
@@ -357,10 +382,12 @@ namespace EasyTcp4Net
             {
                 return;
             }
-
-            _receiveDataTokenSource.Cancel();
-            _socket.Close();
+            
+            _receiveDataTokenSource?.Cancel();
+            _socket?.Close();
+            _dataReceiveTask?.Dispose();
             IsConnected = false;
+            OnDisConnected?.Invoke(this,new ClientSideDisConnectEventArgs(DisConnectReason.Normol));
         }
     }
 }
