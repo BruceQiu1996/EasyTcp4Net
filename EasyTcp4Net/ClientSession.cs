@@ -1,11 +1,8 @@
-﻿using CommunityToolkit.HighPerformance.Buffers;
-using System.Buffers;
+﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 namespace EasyTcp4Net
@@ -44,15 +41,29 @@ namespace EasyTcp4Net
         private Socket _socket;
         private Pipe _pipe;
         private int _bufferSize;
+        private event EventHandler<ServerDataReceiveEventArgs> _onReceivedData;
+        private readonly IPackageFilter _sendPackageFilter; //发送数据包的拦截处理器
+        private readonly IPackageFilter _receivePackageFilter; //接收数据包的拦截处理器
         private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1); //发送数据的信号量
         internal readonly CancellationTokenSource _lifecycleTokenSource;
-        public ClientSession(Socket socket, int bufferSize)
+
+        /// <summary>
+        /// 创建服务端的与客户端的会话
+        /// </summary>
+        /// <param name="socket">与客户端连接的套接字</param>
+        /// <param name="bufferSize">读写缓冲区</param>
+        /// <param name="receiveFilters">接收数据的过滤处理器</param>
+        /// <param name="sendFilters">发送数据的过滤处理器</param>
+        public ClientSession(Socket socket, int bufferSize, IPackageFilter receiveFilter, IPackageFilter sendFilter, EventHandler<ServerDataReceiveEventArgs> onReceivedData)
         {
             _socket = socket;
-            _pipe = new Pipe();
+            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold:1024 * 1024 * 4));
             _bufferSize = bufferSize;
             NetworkStream = new NetworkStream(socket);
             _lifecycleTokenSource = new CancellationTokenSource();
+            _sendPackageFilter = sendFilter;
+            _receivePackageFilter = receiveFilter;
+            _onReceivedData = onReceivedData;
             _processDataTask = Task.Factory.StartNew(ReadPipeAsync, _lifecycleTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
 
@@ -157,7 +168,6 @@ namespace EasyTcp4Net
                     {
                         throw new SocketException();
                     }
-
                     FlushResult result = await PipeWriter.FlushAsync().ConfigureAwait(false);
                     if (result.IsCompleted)
                     {
@@ -175,8 +185,6 @@ namespace EasyTcp4Net
 
         internal async Task ReadPipeAsync()
         {
-            int index = 0;
-            FixedHeaderPackageFilter fixedHeaderPackageFilter = new FixedHeaderPackageFilter(7,3,4);
             while (!_lifecycleTokenSource.Token.IsCancellationRequested)
             {
                 ReadResult result = await PipeReader.ReadAsync();
@@ -184,14 +192,23 @@ namespace EasyTcp4Net
                 ReadOnlySequence<byte> data;
                 do
                 {
-                    data = fixedHeaderPackageFilter.ResolvePackage(ref buffer);
-                    if (!data.IsEmpty) 
+                    if (_receivePackageFilter != null)
                     {
-                        Console.WriteLine(++index);
+                        data = _receivePackageFilter.ResolvePackage(ref buffer);
+                    }
+                    else 
+                    {
+                        data = buffer;
+                        buffer = buffer.Slice(data.Length);
+                    }
+
+                    if (!data.IsEmpty)
+                    {
+                        _onReceivedData?.Invoke(this, new ServerDataReceiveEventArgs(this, data.ToArray()));
                     }
                 }
                 while (!data.IsEmpty);
-                PipeReader.AdvanceTo(buffer.Start, buffer.End);
+                PipeReader.AdvanceTo(buffer.Start);
             }
 
             PipeReader.Complete();

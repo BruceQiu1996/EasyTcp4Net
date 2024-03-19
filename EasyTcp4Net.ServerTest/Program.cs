@@ -11,15 +11,20 @@
                 KeepAlive = true,
                 CheckSessionsIdleMs = 10 * 1000
             });
+            easyTcpServer
+                .SetReceiveFilter(new FixedCharPackageFilter('\n'));
             easyTcpServer.StartListen();
 
+            int index = 0;
+            int bytes = 0;
             easyTcpServer.OnReceivedData += async (obj, data) =>
             {
-                Console.WriteLine(string.Join(',', data.Data));
-                  Console.WriteLine("\n");
-                await data.Session.SendAsync(new byte[] { 12, 13, 14, 15 });
+                index++;
+                bytes += data.Data.Length;
+                Console.WriteLine($"收到消息：{index}");
+                Console.WriteLine($"收到长度：{bytes}");
             };
-
+           
             Console.ReadLine();
         }
     }

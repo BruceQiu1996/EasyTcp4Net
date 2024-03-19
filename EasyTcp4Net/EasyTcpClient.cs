@@ -27,7 +27,6 @@ namespace EasyTcp4Net
         private readonly IPEndPoint _remoteEndPoint; //服务端的终结点
         private readonly IPEndPoint _localEndPoint;
         private readonly ILogger<EasyTcpClient> _logger; //日志对象
-
         private Task _dataReceiveTask = null;
         private NetworkStream _networkStream;
         private SslStream _sslStream;

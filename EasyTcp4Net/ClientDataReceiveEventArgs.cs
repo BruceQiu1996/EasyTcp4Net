@@ -2,11 +2,11 @@
 {
     public class ClientDataReceiveEventArgs
     {
-        public ClientDataReceiveEventArgs(Packet packet) 
+        public ClientDataReceiveEventArgs(Memory<byte> packet) 
         {
             Data = packet;
         }
 
-        public Packet Data { get; private set; }
+        public Memory<byte> Data { get; private set; }
     }
 }
