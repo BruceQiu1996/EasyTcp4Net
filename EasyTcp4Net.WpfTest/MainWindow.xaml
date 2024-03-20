@@ -1,0 +1,119 @@
+﻿<Window x:Class="EasyTcp4Net.WpfTest.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EasyTcp4Net.WpfTest"
+        xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <behaviors:Interaction.Triggers>
+        <behaviors:EventTrigger EventName="Loaded">
+            <behaviors:InvokeCommandAction Command="{Binding LoadCommand}"></behaviors:InvokeCommandAction>
+        </behaviors:EventTrigger>
+    </behaviors:Interaction.Triggers>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="200"></RowDefinition>
+        </Grid.RowDefinitions>
+
+        <GroupBox Header="设置">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="启动服务器" Command="{Binding StartServerCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ServerListening}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"></Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ServerListening}" Value="False">
+                                    <Setter Property="IsEnabled" Value="True"></Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="停止服务器" Margin="5 0 0 0" Command="{Binding StopServerCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ServerListening}" Value="True">
+                                    <Setter Property="IsEnabled" Value="True"></Setter>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ServerListening}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"></Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="新建客户端" Margin="5 0 0 0" Command="{Binding AddClientCommand}"></Button>
+                <Label Content="服务端端口:"></Label>
+                <TextBox Text="{Binding PortText}" Width="120" IsReadOnly="True"></TextBox>
+            </StackPanel>
+        </GroupBox>
+
+        <TabControl ItemsSource="{Binding Clients,UpdateSourceTrigger=PropertyChanged}" Grid.Row="1"
+                    SelectedItem="{Binding SelectedClient,UpdateSourceTrigger=PropertyChanged}">
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="50"></RowDefinition>
+                            <RowDefinition Height="50"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center">
+                            <Button Content="连接" Height="25" Width="120" Margin="5" Command="{Binding ConnectCommandAsync}">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Connected}" Value="True">
+                                                <Setter Property="IsEnabled" Value="False"></Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Connected}" Value="False">
+                                                <Setter Property="IsEnabled" Value="True"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="断开" Height="25" Width="120" Margin="5" Command="{Binding DisConnectedCommandAsync}">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Connected}" Value="True">
+                                                <Setter Property="IsEnabled" Value="True"></Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Connected}" Value="False">
+                                                <Setter Property="IsEnabled" Value="False"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Grid.Row="1">
+                            <TextBox Height="30" Width="250" Text="{Binding SendMessage,UpdateSourceTrigger=PropertyChanged}"></TextBox>
+                            <Button Content="发送" Margin="5" Height="30" Width="120" Command="{Binding SendAsync}"></Button>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <ContentPresenter Content="{Binding ClientId}"/>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+        </TabControl>
+
+        <TextBox Grid.Row="2" IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 AcceptsReturn="True"
+                 Height="180"
+                 Background="LightGray"
+                 Text="{Binding Messages}"></TextBox>
+    </Grid>
+</Window>

@@ -51,12 +51,14 @@ namespace EasyTcp4Net
         /// </summary>
         /// <param name="socket">与客户端连接的套接字</param>
         /// <param name="bufferSize">读写缓冲区</param>
+        /// <param name="bufferSize">内部待处理最大缓冲区，流量控制，背压</param>
         /// <param name="receiveFilters">接收数据的过滤处理器</param>
         /// <param name="sendFilters">发送数据的过滤处理器</param>
-        public ClientSession(Socket socket, int bufferSize, IPackageFilter receiveFilter, EventHandler<ServerDataReceiveEventArgs> onReceivedData)
+        public ClientSession(Socket socket, int bufferSize, int maxPipeBufferSize, IPackageFilter receiveFilter, 
+            EventHandler<ServerDataReceiveEventArgs> onReceivedData)
         {
             _socket = socket;
-            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 1024 * 1024 * 4));
+            _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: maxPipeBufferSize));
             _bufferSize = bufferSize;
             NetworkStream = new NetworkStream(socket);
             _lifecycleTokenSource = new CancellationTokenSource();
@@ -205,7 +207,7 @@ namespace EasyTcp4Net
                         _onReceivedData?.Invoke(this, new ServerDataReceiveEventArgs(this, data.ToArray()));
                     }
                 }
-                while (!data.IsEmpty);
+                while (!data.IsEmpty && buffer.Length > 0);
                 PipeReader.AdvanceTo(buffer.Start);
             }
 
@@ -279,23 +281,29 @@ namespace EasyTcp4Net
             return _socket.CheckConnect();
         }
 
-        public void Dispose()
+        public async Task DisposeAsync()
         {
             if (!IsDisposed)
             {
-                InternalDispose();
+                await InternalDispose();
             }
         }
 
-        private void InternalDispose()
+        private async Task InternalDispose()
         {
             _lifecycleTokenSource?.Cancel();
+            await _processDataTask;
             _socket?.Dispose();
             NetworkStream?.Close();
             NetworkStream?.Dispose();
             SslStream?.Close();
             SslStream?.Dispose();
             IsDisposed = true;
+        }
+
+        public void Dispose()
+        {
+            DisposeAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
     }
 }

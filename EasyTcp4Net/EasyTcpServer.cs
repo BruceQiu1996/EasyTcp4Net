@@ -14,12 +14,12 @@ namespace EasyTcp4Net
 
         private readonly IPAddress _ipAddress = null; //本地监听的ip地址
         private readonly ushort _port = 0; //本地监听端口
-        private readonly Socket _serverSocket;  //服务端本地套接字
+        private Socket _serverSocket;  //服务端本地套接字
         private readonly EasyTcpServerOptions _options = new();//服务端总配置
         private readonly X509Certificate2 _certificate;//ssl证书对象
         private readonly SemaphoreSlim _startListenLock = new SemaphoreSlim(1, 1); //开启监听的信号量
-        private readonly CancellationTokenSource _lifecycleTokenSource; //整个服务端存活的token
-        private readonly CancellationTokenSource _acceptClientTokenSource;//接受客户端连接的token
+        private CancellationTokenSource _lifecycleTokenSource; //整个服务端存活的token
+        private CancellationTokenSource _acceptClientTokenSource;//接受客户端连接的token
         private readonly IPEndPoint _localEndPoint; //服务端本地启动的终结点
         private readonly ILogger<EasyTcpServer> _logger; //日志对象
 
@@ -51,12 +51,11 @@ namespace EasyTcp4Net
                 _ipAddress = IPAddress.TryParse(host, out var tempAddress) ?
                     tempAddress : Dns.GetHostEntry(host).AddressList[0];
             }
-            _serverSocket = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
             _port = port;
             _localEndPoint = new IPEndPoint(_ipAddress, _port);
-            _lifecycleTokenSource = new CancellationTokenSource();
-            _acceptClientTokenSource = new CancellationTokenSource();
             IsListening = false;
+
         }
 
         /// <summary>
@@ -98,6 +97,9 @@ namespace EasyTcp4Net
                 if (IsListening)
                     throw new InvalidOperationException("Listener is running !");
 
+                _serverSocket = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                _lifecycleTokenSource = new CancellationTokenSource();
+                _acceptClientTokenSource = new CancellationTokenSource();
                 _serverSocket.Bind(_localEndPoint);
                 if (_options.BacklogCount != null)
                 {
@@ -173,7 +175,7 @@ namespace EasyTcp4Net
                     }
 
                     var newClientSocket = await _serverSocket.AcceptAsync(_acceptClientTokenSource.Token);
-                    clientSession = new ClientSession(newClientSocket, _options.BufferSize, _receivePackageFilter, OnReceivedData);
+                    clientSession = new ClientSession(newClientSocket, _options.BufferSize,_options.MaxPipeBufferSize, _receivePackageFilter, OnReceivedData);
                     if (_options.IsSsl)
                     {
                         CancellationTokenSource _sslTimeoutTokenSource = new CancellationTokenSource();
@@ -187,7 +189,7 @@ namespace EasyTcp4Net
 
                         if (!result)
                         {
-                            clientSession.Dispose();
+                            await clientSession.DisposeAsync();
                             continue;
                         }
                     }
@@ -207,7 +209,10 @@ namespace EasyTcp4Net
                     _logger?.LogError(ex.ToString());
                     if (ex is TaskCanceledException || ex is OperationCanceledException || ex is AuthenticationException)
                     {
-                        clientSession?.Dispose();
+                        if (clientSession != null)
+                        {
+                            await clientSession.DisposeAsync();
+                        }
                     }
                 }
             }
@@ -241,7 +246,7 @@ namespace EasyTcp4Net
                 _logger?.LogError(ex.ToString());
             }
 
-            clientSession.Dispose();
+            await clientSession.DisposeAsync();
             _clients.TryRemove(clientSession.RemoteEndPoint.ToString(), out var _);
         }
 
@@ -259,7 +264,7 @@ namespace EasyTcp4Net
                     if (clientEntry.Value.LastActiveTime <= expireTime)
                     {
                         // 关闭空闲连接
-                        DisconnectClient(clientEntry.Value);
+                        await DisconnectClientAsync(clientEntry.Value);
                     }
                 }
 
@@ -267,7 +272,7 @@ namespace EasyTcp4Net
             }
         }
 
-        public void DisconnectClient(ClientSession clientSession)
+        public async Task DisconnectClientAsync(ClientSession clientSession)
         {
             if (!_clients.TryGetValue(clientSession.RemoteEndPoint.ToString(), out var temp))
             {
@@ -281,8 +286,30 @@ namespace EasyTcp4Net
                     clientSession._lifecycleTokenSource.Cancel();
                 }
 
-                clientSession.Dispose();
+                await clientSession.DisposeAsync();
             }
+        }
+
+        /// <summary>
+        /// Stop accepting new connections.
+        /// </summary>
+        public async Task CloseAsync()
+        {
+            if (!IsListening)
+                return;
+
+            IsListening = false;
+            _serverSocket.Close();
+            _serverSocket.Dispose();
+            _acceptClientTokenSource?.Cancel();
+            _lifecycleTokenSource?.Cancel();
+
+            foreach (var clients in _clients) 
+            {
+                await clients.Value.DisposeAsync();
+            }
+
+            _clients.Clear();
         }
 
         #region send data

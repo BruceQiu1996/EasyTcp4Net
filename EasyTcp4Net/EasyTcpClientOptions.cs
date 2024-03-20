@@ -40,18 +40,37 @@ namespace EasyTcp4Net
         /// 单位：毫秒
         /// 默认值：30秒
         /// </summary>
-        private int _connectionTimeout = 30 * 1000;
-        public int ConnectionTimeout
+        private int _connectTimeout = 30 * 1000;
+        public int ConnectTimeout
         {
-            get => _connectionTimeout;
+            get => _connectTimeout;
             set
             {
                 if (value <= 0)
                 {
-                    throw new ArgumentException("ConnectionTimeout must be greater then zero");
+                    throw new ArgumentException("ConnectTimeout must be greater then zero");
                 }
 
-                _connectionTimeout = value;
+                _connectTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// 连接失败尝试次数
+        /// 默认值：0(不重试)
+        /// </summary>
+        private int _connectRetryTimes = 0;
+        public int ConnectRetryTimes
+        {
+            get => _connectRetryTimes;
+            set
+            {
+                if (value < 0)
+                {
+                    throw new ArgumentException("ConnectRetryTimes must be greater or equal then zero");
+                }
+
+                _connectRetryTimes = value;
             }
         }
 
@@ -191,10 +210,25 @@ namespace EasyTcp4Net
             }
         }
 
+        private int _maxPipeBufferSize = 1024 * 1024 * 4;
         /// <summary>
-        /// 数据大小端
-        /// 默认值：true(小端模式)
+        /// 待处理数据队列最大缓存,如果有粘包断包的过滤器，要大于单个包的大小，防止卡死
+        /// 用于流量控制，背压
+        /// 单位：字节
+        /// 默认值 4MB
         /// </summary>
-        public bool IsLittleEndian { get; set; } = true;
+        public int MaxPipeBufferSize
+        {
+            get => _maxPipeBufferSize;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("MaxPipeBufferSize must be greater then zero");
+                }
+
+                _maxPipeBufferSize = value;
+            }
+        }
     }
 }

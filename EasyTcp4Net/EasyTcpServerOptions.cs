@@ -198,10 +198,25 @@ namespace EasyTcp4Net
             }
         }
 
+        private int _maxPipeBufferSize = 1024 * 1024 * 4;
         /// <summary>
-        /// 数据大小端
-        /// 默认值：true(小端模式)
+        /// 待处理数据队列最大缓存,如果有粘包断包的过滤器，要大于单个包的大小，防止卡死
+        /// 用于流量控制，背压
+        /// 单位：字节
+        /// 默认值 4MB
         /// </summary>
-        public bool IsLittleEndian { get; set; } = true;
+        public int MaxPipeBufferSize
+        {
+            get => _maxPipeBufferSize;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentException("MaxPipeBufferSize must be greater then zero");
+                }
+
+                _maxPipeBufferSize = value;
+            }
+        }
     }
 }
