@@ -12,7 +12,7 @@ namespace EasyTcp4Net
         /// <summary>
         /// 是否不使用 Nagle's算法
         /// 是为了提高实际带宽利用率设计的算法，其做法是合并小的TCP 包为一个
-        /// 避免了过多的小报文的 过大TCP头所浪费的带宽
+        /// 避免了过多的小报文的过大TCP头所浪费的带宽
         /// </summary>
         public bool NoDelay { get; set; } = true;
         /// <summary>
@@ -75,7 +75,7 @@ namespace EasyTcp4Net
         }
 
         /// <summary>
-        /// 连接等待/挂起连接数量
+        /// 从socket缓冲区读取数据的超时时间
         /// 默认值：10秒
         /// 单位：毫秒
         /// </summary>
@@ -95,7 +95,7 @@ namespace EasyTcp4Net
         }
 
         /// <summary>
-        /// 连接等待/挂起连接数量
+        /// 向socket缓冲区写入数据的超时时间
         /// 默认值：10秒
         /// 单位：毫秒
         /// </summary>

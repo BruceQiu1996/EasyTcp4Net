@@ -14,6 +14,7 @@
                 KeepAlive = true,
                 CheckSessionsIdleMs = 10 * 1000
             });
+            //参数分别为：数据包头长度，数据包体长度，数据包体长度字节数，是否小端在前
             easyTcpServer
                 .SetReceiveFilter(new FixedCharPackageFilter('\n'));
             easyTcpServer.StartListen();

@@ -53,16 +53,16 @@
             // await easyTcpClient.SendAsync(bytes.Slice(200));
             ////foreach (var index in Enumerable.Range(0, 200))
             ////{
-                
 
-               
+
+
             ////}
 
-            //easyTcpClient.OnReceivedData += (obj, e) =>
-            //{
-            //    Console.WriteLine(string.Join(',', e.Data));
-            //    Console.WriteLine("\n");
-            //};
+            easyTcpClient.OnReceivedData += (obj, e) =>
+            {
+                Console.WriteLine(string.Join(',', e.Data));
+                Console.WriteLine("\n");
+            };
 
             Console.Read();
         }

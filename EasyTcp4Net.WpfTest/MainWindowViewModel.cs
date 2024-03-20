@@ -9,6 +9,9 @@ using System.Windows;
 
 namespace EasyTcp4Net.WpfTest
 {
+    /// <summary>
+    /// 没有粘包处理的的测试
+    /// </summary>
     public class MainWindowViewModel : ObservableObject
     {
         private int index = 1;

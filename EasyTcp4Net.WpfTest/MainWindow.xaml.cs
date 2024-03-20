@@ -11,6 +11,7 @@ namespace EasyTcp4Net.WpfTest
         {
             InitializeComponent();
             DataContext = new MainWindowViewModelFixHeader();
+            //DataContext = new MainWindowViewModel();
         }
     }
 }
