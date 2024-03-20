@@ -9,6 +9,9 @@
 
             EasyTcpClient easyTcpClient = new EasyTcpClient("127.0.0.1", 7001, new EasyTcpClientOptions()
             {
+                IsSsl = true,
+                PfxCertFilename = "test.pfx",
+                PfxPassword = "123456",
                 KeepAlive = true,
             });
             await Task.Delay(500);

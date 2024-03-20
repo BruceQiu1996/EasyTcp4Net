@@ -7,6 +7,9 @@
             Console.WriteLine("Hello World,this is Server");
             EasyTcpServer easyTcpServer = new EasyTcpServer(7001, new EasyTcpServerOptions()
             {
+                IsSsl = true,
+                PfxCertFilename = "test.pfx",
+                PfxPassword = "123456",
                 IdleSessionsCheck = false,
                 KeepAlive = true,
                 CheckSessionsIdleMs = 10 * 1000
