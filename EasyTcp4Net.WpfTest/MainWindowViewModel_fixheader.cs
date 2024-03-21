@@ -56,7 +56,10 @@ namespace EasyTcp4Net.WpfTest
             LoadCommand = new RelayCommand(() =>
             {
                 PortText = PortFilter.GetFirstAvailablePort().ToString();
-                _server = new EasyTcpServer(_serverPort);
+                _server = new EasyTcpServer(_serverPort,new EasyTcpServerOptions() 
+                {
+                    ConnectionsLimit = 2
+                });
                 _server.SetReceiveFilter(new FixedHeaderPackageFilter(8 + 4, 8, 4, false));
                 _server.OnReceivedData += async (obj, e) =>
                 {

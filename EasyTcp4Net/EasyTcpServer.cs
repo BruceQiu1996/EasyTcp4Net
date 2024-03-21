@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection.PortableExecutable;
+using System.Runtime;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
@@ -95,24 +97,7 @@ namespace EasyTcp4Net
                 if (IsListening)
                     throw new InvalidOperationException("Listener is running !");
 
-                _serverSocket = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                if (_options.KeepAlive) 
-                    _serverSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
-                _serverSocket.NoDelay = _options.NoDelay;
-
-                _lifecycleTokenSource = new CancellationTokenSource();
-                _acceptClientTokenSource = new CancellationTokenSource();
-                _serverSocket.Bind(_localEndPoint);
-                if (_options.BacklogCount != null)
-                {
-                    _serverSocket.Listen(_options.BacklogCount.Value);
-                }
-                else
-                {
-                    _serverSocket.Listen();
-                }
-
-                IsListening = true;
+                StartSocketListen();
                 var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_acceptClientTokenSource.Token,
                     _lifecycleTokenSource.Token);
 
@@ -143,6 +128,28 @@ namespace EasyTcp4Net
             }
         }
 
+        private void StartSocketListen()
+        {
+            _serverSocket = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            if (_options.KeepAlive)
+                _serverSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
+            _serverSocket.NoDelay = _options.NoDelay;
+
+            _lifecycleTokenSource = new CancellationTokenSource();
+            _acceptClientTokenSource = new CancellationTokenSource();
+            _serverSocket.Bind(_localEndPoint);
+            if (_options.BacklogCount != null)
+            {
+                _serverSocket.Listen(_options.BacklogCount.Value);
+            }
+            else
+            {
+                _serverSocket.Listen();
+            }
+
+            IsListening = true;
+        }
+
         /// <summary>
         /// 添加接收数据的过滤处理器
         /// </summary>
@@ -162,11 +169,11 @@ namespace EasyTcp4Net
         /// <exception cref="InvalidOperationException">已经取消或者没有启动监听后产生的异常</exception>
         private async Task AcceptClientAsync()
         {
+            if (!IsListening)
+                throw new InvalidOperationException(nameof(AcceptClientAsync) + ":listening status error");
+
             while (!_acceptClientTokenSource.Token.IsCancellationRequested)
             {
-                if (!IsListening)
-                    throw new InvalidOperationException(nameof(AcceptClientAsync) + ":listening status error");
-
                 ClientSession clientSession = null;
                 try
                 {
@@ -176,8 +183,13 @@ namespace EasyTcp4Net
                         continue;
                     }
 
+                    if (!IsListening)
+                    {
+                        StartSocketListen();
+                    }
+
                     var newClientSocket = await _serverSocket.AcceptAsync(_acceptClientTokenSource.Token);
-                    clientSession = new ClientSession(newClientSocket, _options.BufferSize,_options.MaxPipeBufferSize, _receivePackageFilter, OnReceivedData);
+                    clientSession = new ClientSession(newClientSocket, _options.BufferSize, _options.MaxPipeBufferSize, _receivePackageFilter, OnReceivedData);
                     if (_options.IsSsl)
                     {
                         CancellationTokenSource _sslTimeoutTokenSource = new CancellationTokenSource();
@@ -205,6 +217,14 @@ namespace EasyTcp4Net
                         await ReceiveClientDataAsync(clientSession);
                     });
                     _logger?.LogInformation($"{clientSession.RemoteEndPoint}：connected.");
+
+                    if (_clients.Count >= _options.ConnectionsLimit)
+                    {
+                        _logger?.LogInformation($"The maximum number of connections has been exceeded");
+                        _serverSocket.Close();
+                        _serverSocket.Dispose();
+                        IsListening = false;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -248,8 +268,8 @@ namespace EasyTcp4Net
                 _logger?.LogError(ex.ToString());
             }
 
-            await clientSession.DisposeAsync();
             _clients.TryRemove(clientSession.RemoteEndPoint.ToString(), out var _);
+            await clientSession.DisposeAsync();
         }
 
         /// <summary>
@@ -306,7 +326,7 @@ namespace EasyTcp4Net
             _acceptClientTokenSource?.Cancel();
             _lifecycleTokenSource?.Cancel();
 
-            foreach (var clients in _clients) 
+            foreach (var clients in _clients)
             {
                 await clients.Value.DisposeAsync();
             }
