@@ -38,7 +38,6 @@ https://learn.microsoft.com/zh-cn/dotnet/api/system.io.pipes?view=net-8.0
 | PfxCertFilename   | ssl证书        |
 | PfxPassword   | ssl证书密钥        |
 | AllowingUntrustedSSLCertificate   | 是否允许不受信任的ssl证书        |
-
 | LoggerFactory   | 日志工厂        |
 | KeepAlive   | 是否启动操作系统的tcp keepalive机制        |
 | KeepAliveTime   | KeepAlive的空闲时长，或者说每次正常发送心跳的周期，默认值为3600s（1小时）       |
