@@ -35,12 +35,12 @@ namespace EasyTcp4Net
             }
         }
 
+        private int _connectTimeout = 30 * 1000;
         /// <summary>
         /// 连接超时时间
         /// 单位：毫秒
         /// 默认值：30秒
         /// </summary>
-        private int _connectTimeout = 30 * 1000;
         public int ConnectTimeout
         {
             get => _connectTimeout;

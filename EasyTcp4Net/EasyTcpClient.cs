@@ -95,9 +95,7 @@ namespace EasyTcp4Net
                     _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
                 }
             }
-
-            if (_options.KeepAlive) _socket.SetKeepAlive(_options.KeepAliveIntvl,_options.KeepAliveTime,_options.KeepAliveProbes);
-            _socket.NoDelay = _options.NoDelay;
+           
             _logger = options.LoggerFactory?.CreateLogger<EasyTcpClient>();
         }
 
@@ -116,6 +114,10 @@ namespace EasyTcp4Net
                     return;
 
                 _socket = new Socket(IPAddress.Any.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                if (_options.KeepAlive) 
+                    _socket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
+                _socket.NoDelay = _options.NoDelay;
+
                 _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: _options.MaxPipeBufferSize));
                 _lifecycleTokenSource = new CancellationTokenSource();
                 int retryTimes = 0;

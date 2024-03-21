@@ -80,8 +80,6 @@ namespace EasyTcp4Net
                     _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
                 }
             }
-            if (_options.KeepAlive) _serverSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
-            _serverSocket.NoDelay = _options.NoDelay;
             _logger = options.LoggerFactory?.CreateLogger<EasyTcpServer>();
         }
 
@@ -98,6 +96,10 @@ namespace EasyTcp4Net
                     throw new InvalidOperationException("Listener is running !");
 
                 _serverSocket = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                if (_options.KeepAlive) 
+                    _serverSocket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
+                _serverSocket.NoDelay = _options.NoDelay;
+
                 _lifecycleTokenSource = new CancellationTokenSource();
                 _acceptClientTokenSource = new CancellationTokenSource();
                 _serverSocket.Bind(_localEndPoint);
