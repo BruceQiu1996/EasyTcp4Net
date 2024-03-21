@@ -36,6 +36,13 @@ namespace EasyTcp4Net
         private PipeReader _pipeReader => _pipe.Reader;
         private PipeWriter _pipeWriter => _pipe.Writer;
         private IPackageFilter _receivePackageFilter = null; //接收数据包的拦截处理器
+        private bool ValidateServerCertificate(object sender, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+
+            return false;
+        }
 
         /// <summary>
         /// 创建一个Tcp服务对象
@@ -83,19 +90,19 @@ namespace EasyTcp4Net
             _options = options;
             if (_options.IsSsl)
             {
-                if (string.IsNullOrEmpty(_options.PfxCertFilename))
-                    throw new ArgumentNullException(nameof(_options.PfxCertFilename));
-
-                if (string.IsNullOrEmpty(_options.PfxPassword))
+                if (!string.IsNullOrEmpty(_options.PfxCertFilename))
                 {
-                    _certificate = new X509Certificate2(_options.PfxCertFilename);
-                }
-                else
-                {
-                    _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
+                    if (string.IsNullOrEmpty(_options.PfxPassword))
+                    {
+                        _certificate = new X509Certificate2(_options.PfxCertFilename);
+                    }
+                    else
+                    {
+                        _certificate = new X509Certificate2(_options.PfxCertFilename, _options.PfxPassword);
+                    }
                 }
             }
-           
+
             _logger = options.LoggerFactory?.CreateLogger<EasyTcpClient>();
         }
 
@@ -114,7 +121,7 @@ namespace EasyTcp4Net
                     return;
 
                 _socket = new Socket(IPAddress.Any.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                if (_options.KeepAlive) 
+                if (_options.KeepAlive)
                     _socket.SetKeepAlive(_options.KeepAliveIntvl, _options.KeepAliveTime, _options.KeepAliveProbes);
                 _socket.NoDelay = _options.NoDelay;
 
@@ -134,7 +141,7 @@ namespace EasyTcp4Net
                         _networkStream.WriteTimeout = _options.WriteTimeout;
                         if (_options.IsSsl)
                         {
-                            if (_options.AllowingUntrustedSSLCertificate)
+                            if (_options.AllowingUntrustedSSLCertificate || _certificate == null)
                             {
                                 _sslStream = new SslStream(_networkStream, false,
                                         (obj, certificate, chain, error) => true);
@@ -146,15 +153,25 @@ namespace EasyTcp4Net
 
                             _sslStream.ReadTimeout = _options.ReadTimeout;
                             _sslStream.WriteTimeout = _options.WriteTimeout;
-                            await _sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
+                        
+                            if (_certificate != null)
                             {
-                                TargetHost = RemoteEndPoint.Address.ToString(),
-                                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
-                                CertificateRevocationCheckMode = _options.CheckCertificateRevocation ? X509RevocationMode.Online : X509RevocationMode.NoCheck,
-                                ClientCertificates = new X509CertificateCollection() { _certificate }
-                            }, connectTokenSource.Token).ConfigureAwait(false);
-                            if (!_sslStream.IsEncrypted || !_sslStream.IsAuthenticated ||
-                                (_options.MutuallyAuthenticate && !_sslStream.IsMutuallyAuthenticated))
+                                await _sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
+                                {
+                                    TargetHost = RemoteEndPoint.Address.ToString(),
+                                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
+                                    CertificateRevocationCheckMode = _options.CheckCertificateRevocation ? X509RevocationMode.Online : X509RevocationMode.NoCheck,
+                                    ClientCertificates = new X509CertificateCollection() { _certificate }
+                                }, connectTokenSource.Token).ConfigureAwait(false);
+                            }
+                            else//客户端不提供证书
+                            {
+                                await _sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
+                                {
+                                    TargetHost = "test"
+                                }, connectTokenSource.Token).ConfigureAwait(false);
+                            }
+                            if (!_sslStream.IsEncrypted || !_sslStream.IsAuthenticated)
                             {
                                 throw new InvalidOperationException("SSL authenticated faild!");
                             }
@@ -193,7 +210,7 @@ namespace EasyTcp4Net
             _receiveDataTokenSource = new CancellationTokenSource();
             IsConnected = true;
             CancellationTokenSource ctx = CancellationTokenSource.CreateLinkedTokenSource(_lifecycleTokenSource.Token, _receiveDataTokenSource.Token);
-            _processDataTask = 
+            _processDataTask =
                 Task.Factory.StartNew(ReadPipeAsync, _lifecycleTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
             _dataReceiveTask = Task.Factory.StartNew(ReceiveDataAsync,
                 ctx.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
@@ -205,6 +222,7 @@ namespace EasyTcp4Net
         /// <returns></returns>
         private async Task ReceiveDataAsync()
         {
+            DisConnectReason disConnectReason = default;
             while (!_receiveDataTokenSource.Token.IsCancellationRequested)
             {
                 try
@@ -227,12 +245,10 @@ namespace EasyTcp4Net
                     }
                     else
                     {
-                        if (IsDisconnect())
+                        if (!IsConnecting())
                         {
-                            await DisConnectAsync();
+                            throw new SocketException();
                         }
-
-                        throw new SocketException();
                     }
 
                     FlushResult result = await _pipeWriter.FlushAsync().ConfigureAwait(false);
@@ -241,24 +257,29 @@ namespace EasyTcp4Net
                         break;
                     }
                 }
-                catch (IOException)
-                {
-                    //TODO log
-                    break;
-                }
-                catch (SocketException)
-                {
-                    //TODO log
-                    break;
-                }
                 catch (TaskCanceledException)
                 {
-                    //TODO log
+                    _logger?.LogError($"Task is canceled.");
+                    disConnectReason = DisConnectReason.Normol;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError($"{ex}");
+                    if (ex is SocketException || ex is IOException)
+                    {
+                        disConnectReason = DisConnectReason.ServerDown;
+                    }
+                    else
+                    {
+                        disConnectReason = DisConnectReason.UnKnown;
+                    }
                     break;
                 }
             }
 
             _pipeWriter.Complete();
+            await DisConnectInternalAsync(disConnectReason);
         }
 
         internal async Task ReadPipeAsync()
@@ -379,7 +400,7 @@ namespace EasyTcp4Net
             }
         }
 
-        private bool IsDisconnect()
+        private bool IsConnecting()
         {
             IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
             TcpConnectionInformation[] tcpConnections = ipProperties.GetActiveTcpConnections()
@@ -400,14 +421,14 @@ namespace EasyTcp4Net
         /// <summary>
         /// 客户端断连
         /// </summary>
-        public async Task DisConnectAsync()
+        private async Task DisConnectInternalAsync(DisConnectReason disConnectReason)
         {
             if (!IsConnected)
             {
                 _logger?.LogInformation($"Already disconnected");
                 return;
             }
-            
+
             _receiveDataTokenSource?.Cancel();
             _lifecycleTokenSource?.Cancel();
             await _dataReceiveTask;
@@ -417,7 +438,15 @@ namespace EasyTcp4Net
             _dataReceiveTask?.Dispose();
             _processDataTask?.Dispose();
             IsConnected = false;
-            OnDisConnected?.Invoke(this,new ClientSideDisConnectEventArgs(DisConnectReason.Normol));
+            OnDisConnected?.Invoke(this, new ClientSideDisConnectEventArgs(disConnectReason: disConnectReason));
+        }
+
+        /// <summary>
+        /// 客户端断连
+        /// </summary>
+        public async Task DisConnectAsync()
+        {
+            await DisConnectInternalAsync(DisConnectReason.Normol);
         }
     }
 }

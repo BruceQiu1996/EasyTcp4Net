@@ -133,11 +133,6 @@ namespace EasyTcp4Net
         /// </summary>
         public bool AllowingUntrustedSSLCertificate { get; set; } = true;
         /// <summary>
-        /// 是否双向的ssl验证,标识了客户端是否需要提供证书
-        /// 默认值：false
-        /// </summary>
-        public bool MutuallyAuthenticate { get; set; } = false;
-        /// <summary>
         /// 是否检查整数的吊销列表
         /// 默认值：true
         /// </summary>

@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Xaml.Behaviors.Layout;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
@@ -63,7 +64,11 @@ namespace EasyTcp4Net.WpfTest
                 _server = new EasyTcpServer(_serverPort, new EasyTcpServerOptions()
                 {
                     ConnectionsLimit = 2,
-                    LoggerFactory = LoggerFactory.Create(options => 
+                    IsSsl = true,
+                    PfxCertFilename = "test.pfx",
+                    PfxPassword = "123456",
+                    MutuallyAuthenticate = true,
+                    LoggerFactory = LoggerFactory.Create(options =>
                     {
                         Log.Logger = new LoggerConfiguration()
                         .MinimumLevel.Information()//最小的记录等级
@@ -104,7 +109,12 @@ namespace EasyTcp4Net.WpfTest
 
             AddClientCommand = new RelayCommand(() =>
             {
-                var newClient = new ClientFixHeader($"客户端{index++}", new EasyTcpClient("127.0.0.1", _serverPort));
+                var newClient = new ClientFixHeader($"客户端{index++}", new EasyTcpClient("127.0.0.1", _serverPort,new EasyTcpClientOptions() 
+                {
+                    IsSsl = true,
+                    PfxCertFilename = "test.pfx",
+                    PfxPassword = "123456"
+                }));
                 Clients.Add(newClient);
                 SelectedClient = newClient;
             });
@@ -157,12 +167,13 @@ namespace EasyTcp4Net.WpfTest
 
             easyTcpClient.OnDisConnected += (obj, e) =>
             {
+                Console.WriteLine("连接已断开");
                 Connected = false;
             };
             easyTcpClient.OnReceivedData += (obj, e) =>
             {
                 var packet = new Pakcet<string>();
-                packet.Deserialize(e.Data.Slice(8 +4).ToArray());
+                packet.Deserialize(e.Data.Slice(8 + 4).ToArray());
                 WeakReferenceMessenger.Default
                     .Send<string, string>($"{ClientId}:收到[{packet.Body}]\n", "AddMessage");
             };
@@ -170,12 +181,15 @@ namespace EasyTcp4Net.WpfTest
             SendAsync = new AsyncRelayCommand(async () =>
             {
                 if (!Connected)
+                {
                     MessageBox.Show("连接断开");
+                    return;
+                }
 
                 if (string.IsNullOrEmpty(SendMessage?.Trim()))
                     return;
 
-                await EasyTcpClient.SendAsync(new Pakcet<string>() 
+                await EasyTcpClient.SendAsync(new Pakcet<string>()
                 {
                     Body = SendMessage,
                 }.Serialize());
@@ -184,93 +198,93 @@ namespace EasyTcp4Net.WpfTest
             });
         }
     }
+}
 
-    /// <summary>
-    /// 数据包
-    /// </summary>
-    public class Pakcet<TBody>
+/// <summary>
+/// 数据包
+/// </summary>
+public class Pakcet<TBody>
+{
+    //头 8 + 4
+    public long Sequence { get; set; }
+    public int BodyLength { get; set; }
+    //
+    public TBody? Body { get; set; }
+    public void Deserialize(byte[] bodyData)
     {
-        //头 8 + 4
-        public long Sequence { get; set; }
-        public int BodyLength { get; set; }
-        //
-        public TBody? Body { get; set; }
-        public void Deserialize(byte[] bodyData)
+        Body = ProtoBufSerializer.DeSerialize<TBody>(bodyData);
+    }
+
+    public byte[] Serialize()
+    {
+        var bodyArray = ProtoBufSerializer.Serialize(Body);
+        BodyLength = bodyArray.Length;
+        byte[] result = new byte[BodyLength + 8 + 4];
+        AddInt64(result, 0, Sequence);
+        AddInt32(result, 8, BodyLength);
+        Buffer.BlockCopy(bodyArray, 0, result, 8 + 4, bodyArray.Length);
+
+        return result;
+    }
+
+    //大端模式添加数据
+    public void AddInt32(byte[] buffer, int startIndex, int v)
+    {
+        buffer[startIndex++] = (byte)(v >> 24);
+        buffer[startIndex++] = (byte)(v >> 16);
+        buffer[startIndex++] = (byte)(v >> 8);
+        buffer[startIndex++] = (byte)v;
+    }
+
+    //大端模式添加数据
+    public static void AddInt64(byte[] buffer, int startIndex, long v)
+    {
+        buffer[startIndex++] = (byte)(v >> 56);
+        buffer[startIndex++] = (byte)(v >> 48);
+        buffer[startIndex++] = (byte)(v >> 40);
+        buffer[startIndex++] = (byte)(v >> 32);
+        buffer[startIndex++] = (byte)(v >> 24);
+        buffer[startIndex++] = (byte)(v >> 16);
+        buffer[startIndex++] = (byte)(v >> 8);
+        buffer[startIndex++] = (byte)v;
+    }
+}
+
+public class ProtoBufSerializer
+{
+    public static byte[] Serialize<T>(T serializeObj)
+    {
+        try
         {
-            Body = ProtoBufSerializer.DeSerialize<TBody>(bodyData);
+            using (var stream = new MemoryStream())
+            {
+                ProtoBuf.Serializer.Serialize<T>(stream, serializeObj);
+                var result = new byte[stream.Length];
+                stream.Position = 0L;
+                stream.Read(result, 0, result.Length);
+                return result;
+            }
         }
-
-        public byte[] Serialize()
+        catch (Exception ex)
         {
-            var bodyArray = ProtoBufSerializer.Serialize(Body);
-            BodyLength = bodyArray.Length;
-            byte[] result = new byte[BodyLength + 8 + 4];
-            AddInt64(result, 0, Sequence);
-            AddInt32(result, 8, BodyLength);
-            Buffer.BlockCopy(bodyArray, 0, result, 8 + 4, bodyArray.Length);
-
-            return result;
-        }
-
-        //大端模式添加数据
-        public void AddInt32(byte[] buffer, int startIndex, int v)
-        {
-            buffer[startIndex++] = (byte)(v >> 24);
-            buffer[startIndex++] = (byte)(v >> 16);
-            buffer[startIndex++] = (byte)(v >> 8);
-            buffer[startIndex++] = (byte)v;
-        }
-
-        //大端模式添加数据
-        public static void AddInt64(byte[] buffer, int startIndex, long v)
-        {
-            buffer[startIndex++] = (byte)(v >> 56);
-            buffer[startIndex++] = (byte)(v >> 48);
-            buffer[startIndex++] = (byte)(v >> 40);
-            buffer[startIndex++] = (byte)(v >> 32);
-            buffer[startIndex++] = (byte)(v >> 24);
-            buffer[startIndex++] = (byte)(v >> 16);
-            buffer[startIndex++] = (byte)(v >> 8);
-            buffer[startIndex++] = (byte)v;
+            return null;
         }
     }
 
-    public class ProtoBufSerializer
+    public static T DeSerialize<T>(byte[] bytes)
     {
-        public static byte[] Serialize<T>(T serializeObj)
+        try
         {
-            try
+            using (var stream = new MemoryStream())
             {
-                using (var stream = new MemoryStream())
-                {
-                    ProtoBuf.Serializer.Serialize<T>(stream, serializeObj);
-                    var result = new byte[stream.Length];
-                    stream.Position = 0L;
-                    stream.Read(result, 0, result.Length);
-                    return result;
-                }
-            }
-            catch (Exception ex)
-            {
-                return null;
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Position = 0L;
+                return ProtoBuf.Serializer.Deserialize<T>(stream);
             }
         }
-
-        public static T DeSerialize<T>(byte[] bytes)
+        catch
         {
-            try
-            {
-                using (var stream = new MemoryStream())
-                {
-                    stream.Write(bytes, 0, bytes.Length);
-                    stream.Position = 0L;
-                    return ProtoBuf.Serializer.Deserialize<T>(stream);
-                }
-            }
-            catch
-            {
-                return default(T);
-            }
+            return default(T);
         }
     }
 }
