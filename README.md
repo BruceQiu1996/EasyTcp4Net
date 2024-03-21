@@ -12,10 +12,14 @@
 ![alt text](image.png)
 
 ##### 为什么选择 Pipe & ReadOnlySequence
-**TCP** 是一个流式面向连接的传输协议，所以源源不断地处理数据，并且在合适的地方进行数据分包，才是我们所关心的。Pipe本身是流水线一样的处理管道，我们只需要把我们收到的数据源源不断地扔到管道里，管道的消费端会帮我们进行数据处理。
+**TCP** 是一个流式面向连接的传输协议，所以源源不断地处理数据，并且在合适的地方进行数据分包，才是我们所关心的。Pipe本身是流水线一样的处理管道，我们只需要把我们收到的数据源源不断地扔到管道里，管道的消费端会帮我们进行数据处理
+
+
 **ReadOnlySequence** 是多组数据的链表结构，更加符合了Tcp的流式传输的特征，并且它强大的多组数据切割能力，可以让我们非常方便的在多数据包中获取正确的数据。
 
 **Link:**
+
+
 https://learn.microsoft.com/zh-cn/dotnet/api/system.buffers.readonlysequence-1?view=net-7.0
 https://learn.microsoft.com/zh-cn/dotnet/api/system.io.pipes?view=net-8.0
 
