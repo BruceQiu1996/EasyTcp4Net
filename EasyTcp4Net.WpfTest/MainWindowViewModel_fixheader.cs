@@ -1,6 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -56,9 +60,19 @@ namespace EasyTcp4Net.WpfTest
             LoadCommand = new RelayCommand(() =>
             {
                 PortText = PortFilter.GetFirstAvailablePort().ToString();
-                _server = new EasyTcpServer(_serverPort,new EasyTcpServerOptions() 
+                _server = new EasyTcpServer(_serverPort, new EasyTcpServerOptions()
                 {
-                    ConnectionsLimit = 2
+                    ConnectionsLimit = 2,
+                    LoggerFactory = LoggerFactory.Create(options => 
+                    {
+                        Log.Logger = new LoggerConfiguration()
+                        .MinimumLevel.Information()//最小的记录等级
+                        .MinimumLevel.Override("Microsoft", LogEventLevel.Information)//对其他日志进行重写,除此之外,目前框架只有微软自带的日志组件
+                        .WriteTo.Console()//输出到控制台
+                        .CreateLogger();
+
+                        options.AddSerilog();
+                    })
                 });
                 _server.SetReceiveFilter(new FixedHeaderPackageFilter(8 + 4, 8, 4, false));
                 _server.OnReceivedData += async (obj, e) =>

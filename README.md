@@ -7,7 +7,8 @@
 - [x] KeepAlive
 - [x] 流量背压控制
 - [x] 粘包和断包处理 
-
+- [x] 日志支持
+ 
 ### Pipe & ReadOnlySequence
 ![alt text](image.png)
 
@@ -118,4 +119,22 @@ easyTcpServer.OnReceivedData += async (obj, data) =>
 {
 
 };
+```
+#### 日志配置
+
+```
+var _server = new EasyTcpServer(_serverPort, new EasyTcpServerOptions()
+{
+    ConnectionsLimit = 2,
+    LoggerFactory = LoggerFactory.Create(options => 
+    {
+        Log.Logger = new LoggerConfiguration()
+        .MinimumLevel.Information()//最小的记录等级
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Information)//对其他日志进行重写,除此之外,目前框架只有微软自带的日志组件
+        .WriteTo.Console()//输出到控制台
+        .CreateLogger();
+
+        options.AddSerilog();
+    })
+});
 ```

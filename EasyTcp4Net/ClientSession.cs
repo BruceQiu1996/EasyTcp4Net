@@ -54,8 +54,7 @@ namespace EasyTcp4Net
         /// <param name="bufferSize">内部待处理最大缓冲区，流量控制，背压</param>
         /// <param name="receiveFilters">接收数据的过滤处理器</param>
         /// <param name="sendFilters">发送数据的过滤处理器</param>
-        public ClientSession(Socket socket, int bufferSize, int maxPipeBufferSize, IPackageFilter receiveFilter, 
-            EventHandler<ServerDataReceiveEventArgs> onReceivedData)
+        public ClientSession(Socket socket, int bufferSize, int maxPipeBufferSize, IPackageFilter receiveFilter, EventHandler<ServerDataReceiveEventArgs> onReceivedData)
         {
             _socket = socket;
             _pipe = new Pipe(new PipeOptions(pauseWriterThreshold: maxPipeBufferSize));
