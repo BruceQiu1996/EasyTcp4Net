@@ -36,13 +36,6 @@ namespace EasyTcp4Net
         private PipeReader _pipeReader => _pipe.Reader;
         private PipeWriter _pipeWriter => _pipe.Writer;
         private IPackageFilter _receivePackageFilter = null; //接收数据包的拦截处理器
-        private bool ValidateServerCertificate(object sender, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            if (sslPolicyErrors == SslPolicyErrors.None)
-                return true;
-
-            return false;
-        }
 
         /// <summary>
         /// 创建一个Tcp服务对象

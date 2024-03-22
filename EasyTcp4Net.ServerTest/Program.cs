@@ -21,14 +21,12 @@
 
             int index = 0;
             int bytes = 0;
-            easyTcpServer.OnReceivedData += async (obj, data) =>
+            easyTcpServer.OnReceivedData += async (obj, e) =>
             {
-                index++;
-                bytes += data.Data.Length;
-                Console.WriteLine($"收到消息：{index}");
-                Console.WriteLine($"收到长度：{bytes}");
+                Console.WriteLine($"数据来自：{e.Session.RemoteEndPoint}");
+                Console.WriteLine(string.Join(',', e.Data));
             };
-           
+
             Console.ReadLine();
         }
     }

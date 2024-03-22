@@ -2,8 +2,6 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection.PortableExecutable;
-using System.Runtime;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 

@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyTcp4Net.ServerTest", "E
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyTcp4Net.ClientTest", "EasyTcp4Net.ClientTest\EasyTcp4Net.ClientTest.csproj", "{E681D07C-38A3-4B0F-AACE-0BD4C085E90C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyTcp4Net.WpfTest", "EasyTcp4Net.WpfTest\EasyTcp4Net.WpfTest.csproj", "{3242E44E-8824-49A3-8455-9089F51E773E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyTcp4Net.WpfTest", "EasyTcp4Net.WpfTest\EasyTcp4Net.WpfTest.csproj", "{3242E44E-8824-49A3-8455-9089F51E773E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyTcp4Net.UnitTest", "EasyTcp4Net.UnitTest\EasyTcp4Net.UnitTest.csproj", "{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{3242E44E-8824-49A3-8455-9089F51E773E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3242E44E-8824-49A3-8455-9089F51E773E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3242E44E-8824-49A3-8455-9089F51E773E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

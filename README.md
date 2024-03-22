@@ -10,9 +10,9 @@
 - [x] 日志支持
  
 ### Pipe & ReadOnlySequence
-![alt text](image.png)
+![alt text](./Images/image.png)
 
-##### 为什么选择 Pipe & ReadOnlySequence
+#### 为什么选择 Pipe & ReadOnlySequence
 **TCP** 是一个流式面向连接的传输协议，所以源源不断地处理数据，并且在合适的地方进行数据分包，才是我们所关心的。Pipe本身是流水线一样的处理管道，我们只需要把我们收到的数据源源不断地扔到管道里，管道的消费端会帮我们进行数据处理
 
 
@@ -114,9 +114,10 @@ easyTcpClient.OnReceivedData += (obj, e) =>
 
 #### 服务端收到数据的回调
 ```
-easyTcpServer.OnReceivedData += async (obj, data) =>
+easyTcpServer.OnReceivedData += async (obj, e) =>
 {
-
+    Console.WriteLine($"数据来自：{e.Session.RemoteEndPoint}");
+    Console.WriteLine(string.Join(',', e.Data));
 };
 ```
 #### 日志配置
