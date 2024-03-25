@@ -441,5 +441,10 @@ namespace EasyTcp4Net
         {
             await DisConnectInternalAsync(DisConnectReason.Normol);
         }
+
+        /// <summary>
+        /// For单元测试
+        /// </summary>
+        public X509Certificate2 Certificate => _certificate;//ssl证书对象
     }
 }
