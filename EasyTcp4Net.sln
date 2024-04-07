@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSenderServer", "FileSen
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSenderClient", "FileSenderLan\FileSenderClient\FileSenderClient.csproj", "{EA66D8EC-864A-4111-B636-1AB34BCA0308}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSenderCommon", "FileSenderLan\FileSenderCommon\FileSenderCommon.csproj", "{544E37D1-DAC2-4807-AA36-0F94AF7527EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{EA66D8EC-864A-4111-B636-1AB34BCA0308}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EA66D8EC-864A-4111-B636-1AB34BCA0308}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EA66D8EC-864A-4111-B636-1AB34BCA0308}.Release|Any CPU.Build.0 = Release|Any CPU
+		{544E37D1-DAC2-4807-AA36-0F94AF7527EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{544E37D1-DAC2-4807-AA36-0F94AF7527EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{544E37D1-DAC2-4807-AA36-0F94AF7527EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{544E37D1-DAC2-4807-AA36-0F94AF7527EB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -60,6 +66,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{E75EF683-7F58-40B1-916B-946665D9566C} = {29F0AAC6-FD7A-48AE-880E-4A775CA93688}
 		{EA66D8EC-864A-4111-B636-1AB34BCA0308} = {29F0AAC6-FD7A-48AE-880E-4A775CA93688}
+		{544E37D1-DAC2-4807-AA36-0F94AF7527EB} = {29F0AAC6-FD7A-48AE-880E-4A775CA93688}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0208ABC8-681B-4FDD-BB27-5AA43CEA23C6}
