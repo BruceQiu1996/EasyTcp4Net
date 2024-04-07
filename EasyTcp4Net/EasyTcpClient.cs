@@ -169,9 +169,16 @@ namespace EasyTcp4Net
                                 throw new InvalidOperationException("SSL authenticated faild!");
                             }
                         }
+
+                        break;
                     }
                     catch (Exception ex)
                     {
+                        try
+                        {
+                            await _socket.DisconnectAsync(true);
+                        }
+                        catch { }
                         _logger?.LogError($"连接{retryTimes}次失败:{ex}");
                         if (_options.ConnectRetryTimes < retryTimes)
                             throw;

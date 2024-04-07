@@ -11,7 +11,7 @@ namespace EasyTcp4Net
     {
         public bool IsListening { get; private set; } //是否正在监听客户端连接中
         public event EventHandler<ServerDataReceiveEventArgs> OnReceivedData;
-
+        public event EventHandler<ServerSideClientConnectionChangeEventArgs> OnClientConnectionChanged;
         private readonly IPAddress _ipAddress = null; //本地监听的ip地址
         private readonly ushort _port = 0; //本地监听端口
         private Socket _serverSocket;  //服务端本地套接字
@@ -210,6 +210,7 @@ namespace EasyTcp4Net
 
                     _clients.TryAdd(clientSession.RemoteEndPoint.ToString(), clientSession);
                     clientSession.Connected = true;
+                    OnClientConnectionChanged?.Invoke(this, new ServerSideClientConnectionChangeEventArgs(clientSession, ConnectsionStatus.Connected));
                     var _ = Task.Factory.StartNew(async () =>
                     {
                         await ReceiveClientDataAsync(clientSession);
@@ -267,6 +268,7 @@ namespace EasyTcp4Net
             }
 
             _clients.TryRemove(clientSession.RemoteEndPoint.ToString(), out var _);
+            OnClientConnectionChanged?.Invoke(this, new ServerSideClientConnectionChangeEventArgs(clientSession, ConnectsionStatus.DisConnected));
             await clientSession.DisposeAsync();
         }
 
