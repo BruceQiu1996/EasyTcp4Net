@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FileSenderCommon.Core
+namespace FileTransfer.Common.Core
 {
     public static class ByteArrayExtension
     {

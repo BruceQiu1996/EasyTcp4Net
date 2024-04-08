@@ -28,7 +28,6 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\EasyTcp4Net\EasyTcp4Net.csproj" />
-	  <ProjectReference Include="..\FileSenderCommon\FileSenderCommon.csproj" />
 	</ItemGroup>
 
 </Project>

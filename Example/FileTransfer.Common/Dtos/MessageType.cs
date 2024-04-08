@@ -1,4 +1,4 @@
-﻿namespace FileSenderCommon.Dtos
+﻿namespace FileTransfer.Common.Dtos
 {
     public enum MessageType : int
     {

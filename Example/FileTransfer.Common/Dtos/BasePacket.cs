@@ -1,11 +1,11 @@
-﻿using FileSenderCommon.Core;
+﻿using FileTransfer.Common.Core;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace FileSenderCommon.Dtos
+namespace FileTransfer.Common.Dtos
 {
     [StructLayout(LayoutKind.Sequential)]
-    public class BasePacket<TBody>
+    public class Packet<TBody>
     {
         //序列号 8字节
         public long Sequence { get; set; }
@@ -14,7 +14,7 @@ namespace FileSenderCommon.Dtos
         //消息类型 4字节
         public MessageType MessageType { get; set; }
         public TBody? Body { get; set; }
-        public BasePacket<TBody> Deserialize(byte[] bodyData)
+        public Packet<TBody> Deserialize(byte[] bodyData)
         {
             var bodyStr = System.Text.Encoding.Default.GetString(bodyData);
             Body = JsonSerializer.Deserialize<TBody>(bodyStr);
