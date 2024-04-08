@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using FileTransfer.Helpers;
+using FileTransfer.Pages;
+using FileTransfer.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Windows;
 
-namespace FileSenderClient
+namespace FileTransfer
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -13,6 +15,7 @@ namespace FileSenderClient
     {
         internal static IServiceProvider? ServiceProvider;
         internal static IHost host;
+
         protected async override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -22,16 +25,18 @@ namespace FileSenderClient
             {
                 service.AddSingleton<MainWindow>();
                 service.AddSingleton<MainWindowViewModel>();
-            });
+                service.AddSingleton<MainPageViewModel>();
+                service.AddSingleton<MainPage>();
 
-            builder.ConfigureHostConfiguration(options =>
-            {
-                options.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                service.AddSingleton<IniHelper>();
+                service.AddSingleton<IniSettings>();
+                service.AddSingleton<NetHelper>();
             });
 
             host = builder.Build();
             ServiceProvider = host.Services;
             await host.StartAsync();
+            await ServiceProvider.GetRequiredService<IniSettings>().InitializeAsync();
             host.Services.GetRequiredService<MainWindow>().Show();
         }
     }
