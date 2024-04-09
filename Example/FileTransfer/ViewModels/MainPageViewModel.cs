@@ -2,11 +2,15 @@
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using EasyTcp4Net;
+using FileTransfer.Common.Dtos;
+using FileTransfer.Common.Dtos.Messages.Connection;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
+using FileTransfer.Resources;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Text.Json;
 using System.Windows;
 
 namespace FileTransfer.ViewModels
@@ -56,13 +60,19 @@ namespace FileTransfer.ViewModels
             set => SetProperty(ref remoteChannelViewModels, value);
         }
 
+        private readonly ConcurrentDictionary<string, ClientConnectedViewModel> _clients = new ConcurrentDictionary<string, ClientConnectedViewModel>();
         private readonly IniSettings _settings;
         private readonly NetHelper _netHelper;
+        private readonly FileTransferDbContext _fileTransferDbContext;
+        private readonly DBHelper _dBHelper;
         private EasyTcpServer _easyTcpServer;
-        public MainPageViewModel(IniSettings iniSettings, NetHelper netHelper)
+        public MainPageViewModel(IniSettings iniSettings, NetHelper netHelper, FileTransferDbContext fileTransferDbContext,
+            DBHelper dBHelper)
         {
             _settings = iniSettings;
             _netHelper = netHelper;
+            _dBHelper = dBHelper;
+            _fileTransferDbContext = fileTransferDbContext;
             WeakReferenceMessenger.Default.Register<MainPageViewModel,
                 Tuple<string, string, ushort>, string>(this, "AddRemoteChannel", async (x, y) =>
             {
@@ -78,14 +88,20 @@ namespace FileTransfer.ViewModels
                 window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 window.ShowDialog();
             });
+            SendFileCommandAsync = new AsyncRelayCommand(SendFileAsync);
         }
 
         public AsyncRelayCommand LoadCommandAsync { get; set; }
         public AsyncRelayCommand StartListeningCommandAsync { get; set; }
         public AsyncRelayCommand StopListeningCommandAsync { get; set; }
         public RelayCommand AddRemoteChannelCommand { get; set; }
+        public AsyncRelayCommand SendFileCommandAsync { get; set; }
+
+        private bool _loaded = false;
         private async Task LoadAsync()
         {
+            if (_loaded)
+                return;
             if (_settings.Port != 0)
             {
                 Port = _settings.Port.ToString();
@@ -96,22 +112,15 @@ namespace FileTransfer.ViewModels
                 await _settings.WritePortAsync(ushort.Parse(Port));
             }
 
-            if (!string.IsNullOrEmpty(_settings.Remotes))
+            var remoteChannels = await _fileTransferDbContext.RemoteChannels.ToListAsync();
+            foreach (var item in remoteChannels.OrderByDescending(x => x.CreateTime))
             {
-                var remotes =
-                    JsonSerializer.Deserialize<IEnumerable<RemoteChannelModel>>(_settings.Remotes);
-
-                if (remotes != null)
-                {
-                    foreach (var item in remotes)
-                    {
-                        RemoteChannelViewModels.Add(new RemoteChannelViewModel(item.IPAddress, item.Port, item.Remark));
-                    }
-                }
+                RemoteChannelViewModels.Add(RemoteChannelViewModel.FromModel(item));
             }
 
             AgreeConnect = _settings.AgreeConnect;
             AgreeTransfer = _settings.AgreeTransfer;
+            _loaded = true;
         }
 
         /// <summary>
@@ -137,9 +146,11 @@ namespace FileTransfer.ViewModels
                 {
                     await _easyTcpServer.CloseAsync();
                     _easyTcpServer.OnClientConnectionChanged -= OnNewClientConnectedAsync!;
+                    _easyTcpServer.OnReceivedData -= OnReceiveDataAsync!;
                 }
                 _easyTcpServer = new EasyTcpServer(_settings.Port);
                 _easyTcpServer.OnClientConnectionChanged += OnNewClientConnectedAsync!;
+                _easyTcpServer.OnReceivedData += OnReceiveDataAsync!;
                 _easyTcpServer.StartListen();
                 StartListening = true;
             }
@@ -156,6 +167,20 @@ namespace FileTransfer.ViewModels
         /// <param name="e"></param>
         private async void OnNewClientConnectedAsync(object obj, ServerSideClientConnectionChangeEventArgs e)
         {
+            if (e.Status == ConnectsionStatus.DisConnected)
+            {
+                _clients.TryRemove(e.ClientSession.SessionId, out var temp);
+                await _easyTcpServer.DisconnectClientAsync(e.ClientSession);
+                //TODO如果有该对象发送过来的文件数据则需要处理
+
+                return;
+            }
+            if (e.Status == ConnectsionStatus.Connected && _clients.ContainsKey(e.ClientSession.SessionId))
+            {
+                await _easyTcpServer.DisconnectClientAsync(e.ClientSession);
+                return;
+            }
+
             if (e.Status == ConnectsionStatus.Connected && !_settings.AgreeConnect) //不经过允许的连接
             {
                 await Application.Current.Dispatcher.InvokeAsync(async () =>
@@ -167,11 +192,40 @@ namespace FileTransfer.ViewModels
                     if (result != null && !result.Value)
                     {
                         await _easyTcpServer.DisconnectClientAsync(e.ClientSession);
+                        return;
                     }
                 });
             }
 
-            //TODO添加到连接队列
+            var vm = new ClientConnectedViewModel(e.ClientSession);
+            _clients.TryAdd(e.ClientSession.SessionId, vm);
+            //发送token到连接客户端
+            await e.ClientSession.SendAsync(new Packet<ConnectionAck>()
+            {
+                MessageType = Common.Dtos.Messages.MessageType.ConnectionAck,
+                Body = new ConnectionAck()
+                {
+                    SessionToken = vm.SessionToken
+                }
+            }.Serialize());
+        }
+
+        /// <summary>
+        /// 当服务端后到消息后
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="e"></param>
+        private async void OnReceiveDataAsync(object obj, ServerDataReceiveEventArgs e)
+        {
+            if (_clients.ContainsKey(e.Session.SessionId))
+            {
+                await _clients[e.Session.SessionId].OnReceiveDataAsync(e.Data);
+            }
+        }
+
+        private async Task SendFileAsync()
+        {
+
         }
 
         /// <summary>
@@ -200,30 +254,23 @@ namespace FileTransfer.ViewModels
                 return;
             }
 
-            List<RemoteChannelModel> remotes = null;
-            if (string.IsNullOrEmpty(_settings.Remotes))
+            var channel = _fileTransferDbContext.RemoteChannels
+                .FirstOrDefault(x => x.IPAddress == ip && x.Port == port);
+            if (channel != null)
             {
-                remotes = new List<RemoteChannelModel>();
-            }
-            else
-            {
-                remotes = JsonSerializer.Deserialize<List<RemoteChannelModel>>(_settings.Remotes);
-                if (remotes == null)
-                {
-                    remotes = new List<RemoteChannelModel>();
-                }
+                HandyControl.Controls.MessageBox.Show("远程连接已存在", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
             }
 
-            remotes.Add(new RemoteChannelModel()
+            var model = new RemoteChannelModel()
             {
+                Remark = remark,
                 IPAddress = ip,
-                Port = port,
-                Remark = remark
-            });
+                Port = port
+            };
+            await _dBHelper.AddRemoteChannelAsync(model);
 
-            await _settings.WriteRemotesAsync(JsonSerializer.Serialize(remotes));
-            RemoteChannelViewModels.Add(new RemoteChannelViewModel(ip, port, remark));
-
+            RemoteChannelViewModels.Add(new RemoteChannelViewModel(model.Id, ip, port, remark));
             HandyControl.Controls.MessageBox.Show("添加成功", "信息", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }

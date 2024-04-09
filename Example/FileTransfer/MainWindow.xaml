@@ -41,7 +41,35 @@
                 Background="White" BorderThickness="0">
                 <Grid>
                     <TextBlock Text="{Binding ElementName=main,Path=Title}" FontFamily="宋体" FontSize="14" VerticalAlignment="Center" 
-                               Margin="5 0 0 0" Foreground="Black"></TextBlock>
+                               Margin="5 0 0 0" Cursor="Hand" Width="70" HorizontalAlignment="Left">
+                        <behaviors:Interaction.Triggers>
+                            <behaviors:EventTrigger EventName="MouseLeftButtonDown">
+                                <behaviors:InvokeCommandAction Command="{Binding OpenMainPageCommand}"></behaviors:InvokeCommandAction>
+                            </behaviors:EventTrigger>
+                        </behaviors:Interaction.Triggers>
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="Gray"></Setter>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="False">
+                                        <Setter Property="Foreground" Value="Black"></Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Label Content="传输列表" HorizontalAlignment="Left"
+                           Style="{StaticResource LabelPrimary}"
+                           Cursor="Hand"
+                           Margin="80 5 0 5" >
+                        <behaviors:Interaction.Triggers>
+                            <behaviors:EventTrigger EventName="MouseLeftButtonDown">
+                                <behaviors:InvokeCommandAction Command="{Binding OpenTransferPageCommand}"></behaviors:InvokeCommandAction>
+                            </behaviors:EventTrigger>
+                        </behaviors:Interaction.Triggers>
+                    </Label>
                     <Label BorderThickness="0"
                            Cursor="Hand"
                            ToolTip="最小化"

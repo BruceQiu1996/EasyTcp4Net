@@ -1,0 +1,163 @@
+﻿<Page x:Class="FileTransfer.Pages.TransferPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:hc="https://handyorg.github.io/handycontrol"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="Transfer">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="80"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+
+        <hc:Card Grid.Column="0" 
+             Background="White" 
+             Margin="2 3"
+             BorderThickness="0">
+            <ListBox Background="White" BorderThickness="0">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical"></StackPanel>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBoxItem Padding="0" Cursor="Hand" Height="35" Width="70" Margin="-1 1 0 0" IsSelected="True">
+                    <behaviors:Interaction.Triggers>
+                        <behaviors:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                            <behaviors:InvokeCommandAction Command="{Binding OpenSendFilePageCommand}"></behaviors:InvokeCommandAction>
+                        </behaviors:EventTrigger>
+                    </behaviors:Interaction.Triggers>
+                    <ListBoxItem.Style>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItemBaseStyle}">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#888"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBoxItem.Style>
+                    <hc:Badge Background="Red" Foreground="White" Text="{Binding UploadingTasksCountText}" Padding="4.5 0"
+                          BadgeMargin="20 -3 -13 0" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Label BorderThickness="0"
+                                   Cursor="Hand"
+                                   ToolTip="发送"
+                                   Padding="0"
+                                   Margin="8 0"
+                                   Background="Transparent"
+                                   VerticalContentAlignment="Center"
+                                   Grid.Column="1">
+                                <Path Data="{StaticResource send}" 
+                                  SnapsToDevicePixels="True"
+                                  Height="15" Width="15"
+                                  Stroke="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                                  Stretch="Uniform"/>
+                            </Label>
+                            <TextBlock Text="发送" FontSize="13.5" 
+                                   Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                                   VerticalAlignment="Center"></TextBlock>
+                        </StackPanel>
+                    </hc:Badge>
+                </ListBoxItem>
+
+                <ListBoxItem Padding="0" Cursor="Hand" Height="35" Width="70" Margin="-1 20 0 0">
+                    <ListBoxItem.Style>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItemBaseStyle}">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#888"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBoxItem.Style>
+                    <behaviors:Interaction.Triggers>
+                        <behaviors:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                            <behaviors:InvokeCommandAction Command="{Binding OpenReceiveFilePageCommand}"></behaviors:InvokeCommandAction>
+                        </behaviors:EventTrigger>
+                    </behaviors:Interaction.Triggers>
+                    <hc:Badge Background="Red" Foreground="White" Text="{Binding DownloadingTasksCountText}" Padding="4.5 0"
+                              BadgeMargin="20 -3 -13 0" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Label BorderThickness="0"
+                           Cursor="Hand"
+                           Padding="0"
+                           Margin="8 0"
+                           ToolTip="接收"
+                           Background="Transparent"
+                           VerticalContentAlignment="Center"
+                           Grid.Column="1">
+                                <Path Data="{StaticResource receive}" 
+                              SnapsToDevicePixels="True"
+                              Height="15" Width="15"
+                              Stroke="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                              Stretch="Uniform"/>
+                            </Label>
+                            <TextBlock Text="接收" 
+                                   Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                                   FontSize="13.5" VerticalAlignment="Center"></TextBlock>
+                        </StackPanel>
+                    </hc:Badge>
+                </ListBoxItem>
+
+                <ListBoxItem Height="35" Cursor="Hand" Width="70" Padding="0" Margin="-1 20 0 0">
+                    <ListBoxItem.Style>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItemBaseStyle}">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#888"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBoxItem.Style>
+                    <behaviors:Interaction.Triggers>
+                        <behaviors:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                            <behaviors:InvokeCommandAction Command="{Binding OpenCompleteTransferPageCommand}"></behaviors:InvokeCommandAction>
+                        </behaviors:EventTrigger>
+                    </behaviors:Interaction.Triggers>
+                    <StackPanel Orientation="Horizontal">
+                        <Label BorderThickness="0"
+                               Cursor="Hand"
+                               ToolTip="完成"
+                               Padding="0"
+                               Margin="8 0"
+                               Background="Transparent"
+                               VerticalContentAlignment="Center"
+                               Grid.Column="1">
+                            <Path Data="{StaticResource finish}" 
+                                  SnapsToDevicePixels="True"
+                                  Height="15" Width="15"
+                                  Stroke="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                                  Stretch="Uniform"/>
+                        </Label>
+                        <TextBlock Text="完成" 
+                               Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=ListBoxItem},Path=Foreground}" 
+                               FontSize="13.5" VerticalAlignment="Center"></TextBlock>
+                    </StackPanel>
+                </ListBoxItem>
+            </ListBox>
+        </hc:Card>
+
+        <Frame Content="{Binding CurrentPage,UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" BorderThickness="0"
+               NavigationUIVisibility="Hidden">
+        </Frame>
+    </Grid>
+</Page>

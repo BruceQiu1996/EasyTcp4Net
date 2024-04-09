@@ -7,14 +7,12 @@ namespace FileTransfer.Helpers
         #region 配置keys
         public const string ApplicationSectionKey = nameof(ApplicationSectionKey);
         public const string PortKey = nameof(PortKey);
-        public const string RemotesKey = nameof(RemotesKey);
         public const string AgreeTransferKey = nameof(AgreeTransferKey);
         public const string AgreeConnectKey = nameof(AgreeConnectKey);
         #endregion
 
         #region 配置项
         public ushort Port { get; private set; }
-        public string Remotes { get; private set; }
         public bool AgreeTransfer { get; private set; }
         public bool AgreeConnect { get; private set; }
         #endregion
@@ -30,7 +28,6 @@ namespace FileTransfer.Helpers
         {
             Port = ushort
                 .TryParse(await _iniHelper.ReadAsync(ApplicationSectionKey, PortKey), out var tempPortKey) ? tempPortKey : default;
-            Remotes = await _iniHelper.ReadAsync(ApplicationSectionKey, RemotesKey);
             AgreeTransfer = bool.TryParse(await _iniHelper.ReadAsync(ApplicationSectionKey, AgreeTransferKey), out var tempAgreeTransferKey) ? tempAgreeTransferKey : false;
             AgreeConnect = bool.TryParse(await _iniHelper.ReadAsync(ApplicationSectionKey, AgreeConnectKey), out var tempAgreeConnectKey) ? tempAgreeConnectKey : false;
         }
@@ -39,12 +36,6 @@ namespace FileTransfer.Helpers
         {
             await _iniHelper.WriteAsync(ApplicationSectionKey, PortKey, port.ToString());
             Port = port;
-        }
-
-        public async Task WriteRemotesAsync(string remotes)
-        {
-            await _iniHelper.WriteAsync(ApplicationSectionKey, RemotesKey, remotes);
-            Remotes = remotes;
         }
 
         public async Task WriteAgreeTransferAsync(bool value)
