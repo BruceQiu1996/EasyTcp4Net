@@ -46,7 +46,7 @@ namespace FileTransfer.Helpers
         /// </summary>
         /// <param name="channelModel">远端模型</param>
         /// <returns></returns>
-        public async Task<bool> AddFileSendRecordAsync(FileSendRecord fileSendRecord)
+        public async Task<bool> AddFileSendRecordAsync(FileSendRecordModel fileSendRecord)
         {
             try
             {

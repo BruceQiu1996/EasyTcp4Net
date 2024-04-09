@@ -17,7 +17,7 @@ namespace FileTransfer.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.3");
 
-            modelBuilder.Entity("FileTransfer.Models.FileSendRecord", b =>
+            modelBuilder.Entity("FileTransfer.Models.FileSendRecordModel", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -30,6 +30,10 @@ namespace FileTransfer.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FileLocation")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -46,8 +50,14 @@ namespace FileTransfer.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<long>("TotalSize")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TransferToken")
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("TransferedSize")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

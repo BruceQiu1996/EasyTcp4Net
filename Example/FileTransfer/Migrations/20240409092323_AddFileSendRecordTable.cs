@@ -17,6 +17,9 @@ namespace FileTransfer.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     FileLocation = table.Column<string>(type: "TEXT", nullable: false),
+                    FileName = table.Column<string>(type: "TEXT", nullable: false),
+                    TotalSize = table.Column<long>(type: "INTEGER", nullable: false),
+                    TransferedSize = table.Column<long>(type: "INTEGER", nullable: false),
                     Code = table.Column<string>(type: "TEXT", nullable: false),
                     RemoteId = table.Column<string>(type: "TEXT", nullable: false),
                     TransferToken = table.Column<string>(type: "TEXT", nullable: true),

@@ -1,13 +1,26 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Messaging;
+using FileTransfer.Models;
+using System.Collections.ObjectModel;
 
 namespace FileTransfer.ViewModels.Transfer
 {
     public class SendFilePageViewModel :  ObservableObject
     {
+        private ObservableCollection<FileSendViewModel> fileSendViewModels = new ObservableCollection<FileSendViewModel>();
+        public ObservableCollection<FileSendViewModel> FileSendViewModels
+        {
+            get => fileSendViewModels;
+            set => SetProperty(ref fileSendViewModels, value);
+        }
+
+        public SendFilePageViewModel()
+        {
+            WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
+                FileSendRecordModel, string>(this, "AddSendFileRecord", async (x, y) =>
+                {
+                    FileSendViewModels.Add(FileSendViewModel.FromModel(y));
+                });
+        }
     }
 }

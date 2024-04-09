@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using EasyTcp4Net;
 using FileTransfer.Common.Dtos;
 using FileTransfer.Common.Dtos.Messages;
@@ -164,12 +165,13 @@ namespace FileTransfer.ViewModels
                     var code =
                         App.ServiceProvider!.GetRequiredService<FileHelper>().ToSHA256(fileStream);
                     //创建到数据库，并且添加到传输列表
-                    var result = await App.ServiceProvider!.GetRequiredService<DBHelper>()
-                        .AddFileSendRecordAsync(new FileSendRecord(file, code, Id));
+                    var record = new FileSendRecordModel(file, fileInfo.Name, code, fileInfo.Length, Id);
+                    var result = await App.ServiceProvider!.GetRequiredService<DBHelper>().AddFileSendRecordAsync(record);
                     if (!result)
                         throw new Exception("写入到数据库错误");
 
-
+                    //发送到界面
+                    WeakReferenceMessenger.Default.Send(record, "AddSendFileRecord");
                     await _easyTcpClient.SendAsync(new Packet<ApplyFileTransfer>()
                     {
                         MessageType = MessageType.ApplyTrasnfer,

@@ -157,6 +157,7 @@
         </hc:Card>
 
         <Frame Content="{Binding CurrentPage,UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" BorderThickness="0"
+               Margin="0 2"
                NavigationUIVisibility="Hidden">
         </Frame>
     </Grid>
