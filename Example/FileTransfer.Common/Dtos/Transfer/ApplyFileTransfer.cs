@@ -11,17 +11,18 @@ namespace FileTransfer.Common.Dtos.Transfer
         /// 文件传输
         /// </summary>
         /// <param name="fileName">文件名</param>
+        /// <param name="fileSendId">发送记录编号</param>
         /// <param name="totalSize">文件总大小</param>
         /// <param name="segmentCount">分段数量</param>
         /// <param name="startIndex">起始下标</param>
         /// <param name="code">文件sha256</param>
         /// <param name="sessionToken">会话的token</param>
-        public ApplyFileTransfer(string fileName, long totalSize, int segmentCount, int startIndex,
+        public ApplyFileTransfer(string fileName, string fileSendId, long totalSize, int startIndex,
             string code, string sessionToken)
         {
             FileName = fileName;
+            FileSendId = fileSendId;
             TotalSize = totalSize;
-            SegmentCount = segmentCount;
             StartIndex = startIndex;
             Code = code;
             SessionToken = sessionToken;
@@ -31,14 +32,15 @@ namespace FileTransfer.Common.Dtos.Transfer
         /// 断点续传需要多一个传输token
         /// </summary>
         /// <param name="fileName">文件名</param>
+        /// <param name="fileSendId">发送记录编号</param>
         /// <param name="totalSize">文件总大小</param>
         /// <param name="segmentCount">分段数量</param>
         /// <param name="startIndex">起始下标</param>
         /// <param name="code">文件sha256</param>
         /// <param name="sessionToken">会话的token</param>
         /// <param name="transferToken">传输的token</param>
-        public ApplyFileTransfer(string fileName, long totalSize, int segmentCount, int startIndex,
-            string code, string sessionToken, string transferToken) : this(fileName, totalSize, segmentCount, startIndex, code, sessionToken)
+        public ApplyFileTransfer(string fileName, string fileSendId, long totalSize, int startIndex,
+            string code, string sessionToken, string transferToken) : this(fileName, fileSendId, totalSize, startIndex, code, sessionToken)
         {
             TransferToken = transferToken;
         }
@@ -49,6 +51,7 @@ namespace FileTransfer.Common.Dtos.Transfer
         public ApplyFileTransfer() { }
 
         public string FileName { get; set; }
+        public string FileSendId { get; set; }
         public long TotalSize { get; set; } //剩余传输的字节数
         public int SegmentCount { get; set; } //段数
         public int StartIndex { get; set; } //起始字节，不为0则是断点续传

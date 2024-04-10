@@ -16,15 +16,17 @@
     </behaviors:Interaction.Triggers>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="42"></RowDefinition>
+            <RowDefinition Height="82"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
             <RowDefinition Height="30"></RowDefinition>
         </Grid.RowDefinitions>
 
         <hc:Card Margin="2">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0 2 0 0">
                 <TextBox Text="{Binding Port,UpdateSourceTrigger=PropertyChanged}"
-                         Height="20" Width="150"
+                         Height="10" Width="150"
+                         FontSize="12"
                          Margin="5 0 0 0"
                          Style="{StaticResource TextBoxExtend}"
                          hc:TitleElement.Title="监听端口号:"
@@ -38,10 +40,15 @@
                         Command="{Binding StopListeningCommandAsync}"
                         Height="30" Width="80" Margin="5 0 0 0" Cursor="Hand"></Button>
 
-                <CheckBox Margin="5 0 0 0" 
+                <CheckBox Margin="15 0 0 0" 
                           IsChecked="{Binding AgreeConnect}" Content="允许任何连接" ToolTip="如果不选中，则每个连接都需要确认"></CheckBox>
                 <CheckBox Margin="5 0 0 0" 
                           IsChecked="{Binding AgreeTransfer}" Content="允许任何传输" ToolTip="如果不选中，则每个文件传输都需要确认"></CheckBox>
+            </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <TextBox Text="{Binding FileSaveLocation,UpdateSourceTrigger=PropertyChanged}" Width="380" IsReadOnly="True"></TextBox>
+                    <Button Content="修改文件保存地址" Command="{Binding ChooseSaveFileLocationCommandAsync}" Margin="10 0 0 0" Cursor="Hand"></Button>
+                </StackPanel>
             </StackPanel>
         </hc:Card>
 

@@ -9,8 +9,10 @@ using FileTransfer.Models;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 
 namespace FileTransfer.ViewModels
@@ -53,6 +55,13 @@ namespace FileTransfer.ViewModels
             }
         }
 
+        private string fileSaveLocation;
+        public string FileSaveLocation
+        {
+            get => fileSaveLocation;
+            set => SetProperty(ref fileSaveLocation, value);
+        }
+
         private ObservableCollection<RemoteChannelViewModel> remoteChannelViewModels = new ObservableCollection<RemoteChannelViewModel>();
         public ObservableCollection<RemoteChannelViewModel> RemoteChannelViewModels
         {
@@ -65,9 +74,10 @@ namespace FileTransfer.ViewModels
         private readonly NetHelper _netHelper;
         private readonly FileTransferDbContext _fileTransferDbContext;
         private readonly DBHelper _dBHelper;
+        private readonly GrowlHelper _grolHelper;
         private EasyTcpServer _easyTcpServer;
         public MainPageViewModel(IniSettings iniSettings, NetHelper netHelper, FileTransferDbContext fileTransferDbContext,
-            DBHelper dBHelper)
+            DBHelper dBHelper, GrowlHelper grolHelper)
         {
             _settings = iniSettings;
             _netHelper = netHelper;
@@ -89,6 +99,8 @@ namespace FileTransfer.ViewModels
                 window.ShowDialog();
             });
             SendFileCommandAsync = new AsyncRelayCommand(SendFileAsync);
+            ChooseSaveFileLocationCommandAsync = new AsyncRelayCommand(ChooseSaveFileLocationAsync);
+            _grolHelper = grolHelper;
         }
 
         public AsyncRelayCommand LoadCommandAsync { get; set; }
@@ -96,6 +108,7 @@ namespace FileTransfer.ViewModels
         public AsyncRelayCommand StopListeningCommandAsync { get; set; }
         public RelayCommand AddRemoteChannelCommand { get; set; }
         public AsyncRelayCommand SendFileCommandAsync { get; set; }
+        public AsyncRelayCommand ChooseSaveFileLocationCommandAsync { get; set; }
 
         private bool _loaded = false;
         private async Task LoadAsync()
@@ -120,7 +133,37 @@ namespace FileTransfer.ViewModels
 
             AgreeConnect = _settings.AgreeConnect;
             AgreeTransfer = _settings.AgreeTransfer;
+            //加载存储位置
+            if (string.IsNullOrEmpty(_settings.FileSaveLocation))
+            {
+                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "EasyFileTransfer");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                await _settings.WriteFileSaveLocationAsync(path);
+            }
+            FileSaveLocation = _settings.FileSaveLocation;
+            if (!Directory.Exists(FileSaveLocation))
+            {
+                _grolHelper.Warning("文件存储目录不存在");
+            }
             _loaded = true;
+        }
+
+        /// <summary>
+        /// 选择存放文件的位置
+        /// </summary>
+        private async Task ChooseSaveFileLocationAsync()
+        {
+            OpenFolderDialog openFolderDialog = new OpenFolderDialog();
+            var result = openFolderDialog.ShowDialog();
+            if (result != null && result.Value)
+            {
+                await _settings.WriteFileSaveLocationAsync(openFolderDialog.FolderName);
+                FileSaveLocation = _settings.FileSaveLocation;
+            }
         }
 
         /// <summary>

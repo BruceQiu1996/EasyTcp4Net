@@ -16,7 +16,6 @@ namespace FileTransfer.Models
         public long TransferedSize { get; set; }
         public string Code { get; set; }
         public string RemoteId { get; set; }
-        public string? TransferToken { get; set; }
         public DateTime CreateTime { get; set; } = DateTime.Now;
         public DateTime? FinishTime { get; set; }
         public FileSendStatus Status { get; set; }

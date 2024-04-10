@@ -148,5 +148,25 @@ namespace FileTransfer.Helpers
                 source.Freeze();
             }
         }
+
+        public bool PathCanSave(string path, long size)
+        {
+            if (!Directory.Exists(path))
+                return false;
+
+            var disk = Path.GetPathRoot(path);
+            DriveInfo drive = new DriveInfo(disk);
+            if (drive.IsReady)
+            {
+                if (drive.AvailableFreeSpace <= size)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
     }
 }

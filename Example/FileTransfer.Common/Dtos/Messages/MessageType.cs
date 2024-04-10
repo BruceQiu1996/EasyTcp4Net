@@ -6,5 +6,7 @@
 
         ApplyTrasnfer = 2,
         ApplyTrasnferAck = 3,
+
+        FileSend = 4,
     }
 }

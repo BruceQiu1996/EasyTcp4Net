@@ -8,11 +8,12 @@ using FileTransfer.Common.Dtos.Messages.Connection;
 using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
+using FileTransfer.Resources;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Buffers.Binary;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace FileTransfer.ViewModels
 {
@@ -48,6 +49,7 @@ namespace FileTransfer.ViewModels
 
         public string Token { get; private set; }
         private readonly EasyTcpClient _easyTcpClient;
+        private readonly List<FileSendViewModel> fileSendViewModels = new List<FileSendViewModel>();
         public RemoteChannelViewModel(string id, string ip, ushort port, string remark = null)
         {
             Id = id;
@@ -127,6 +129,37 @@ namespace FileTransfer.ViewModels
                         Status = "连接成功";
                     }
                     break;
+                case MessageType.ApplyTrasnferAck:
+                    {
+                        var packet = Packet<ApplyFileTransferAck>.FromBytes(data);
+                        var recordVM = fileSendViewModels
+                                .FirstOrDefault(x => x.Id == packet.Body.FileSendId);
+
+                        if (recordVM == null)
+                            return;
+
+                        if (!packet.Body.Approve)
+                        {
+                            App.ServiceProvider.GetRequiredService<GrowlHelper>()
+                                .WarningGlobal("发送失败:" + packet.Body.Message);
+
+                            var _ = Task.Run(async () =>
+                            {
+                                await Task.Delay(2000);
+                                //任务设置成失败
+                                //TODO界面上任务取消并且移除到完成界面
+                                //数据库更新
+                                await App.ServiceProvider.GetRequiredService<DBHelper>()
+                                    .UpdateFileSendRecordCompleteAsync(packet.Body.FileSendId, Id, false, packet.Body.Message);
+                            });
+
+                        }
+                        else
+                        {
+                            await recordVM.SendAsync(0, _easyTcpClient, packet.Body.Token);
+                        }
+                    }
+                    break;
             }
         }
 
@@ -154,30 +187,32 @@ namespace FileTransfer.ViewModels
             //创建请求到对端
             try
             {
+                FileInfo fileInfo = new FileInfo(file);
+                string code = null; //sha265
                 using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
-                    FileInfo fileInfo = new FileInfo(file);
-                    var segments = fileInfo.Length / (4 * 1024);
-                    if (fileInfo.Length % (4 * 1024) != 0)
-                    {
-                        segments++;
-                    }
-                    var code =
-                        App.ServiceProvider!.GetRequiredService<FileHelper>().ToSHA256(fileStream);
-                    //创建到数据库，并且添加到传输列表
-                    var record = new FileSendRecordModel(file, fileInfo.Name, code, fileInfo.Length, Id);
-                    var result = await App.ServiceProvider!.GetRequiredService<DBHelper>().AddFileSendRecordAsync(record);
-                    if (!result)
-                        throw new Exception("写入到数据库错误");
-
-                    //发送到界面
-                    WeakReferenceMessenger.Default.Send(record, "AddSendFileRecord");
-                    await _easyTcpClient.SendAsync(new Packet<ApplyFileTransfer>()
-                    {
-                        MessageType = MessageType.ApplyTrasnfer,
-                        Body = new ApplyFileTransfer(fileInfo.Name, fileInfo.Length, (int)segments, 0, code, Token)
-                    }.Serialize());
+                    code = App.ServiceProvider!.GetRequiredService<FileHelper>().ToSHA256(fileStream);
+                    
                 }
+                //创建到数据库，并且添加到传输列表
+                var record = new FileSendRecordModel(file, fileInfo.Name, code, fileInfo.Length, Id);
+                var result = await App.ServiceProvider!.GetRequiredService<DBHelper>().AddFileSendRecordAsync(record);
+                if (!result)
+                    throw new Exception("写入到数据库错误");
+
+                //发送到界面
+                var channel = await App.ServiceProvider!.GetRequiredService<FileTransferDbContext>()
+                    .RemoteChannels.FirstOrDefaultAsync(x => x.Id == Id);
+
+                //根据channel和发送记录生成发送任务viewmodel
+                var fileSendViewModel = FileSendViewModel.FromModel(record, channel);
+                fileSendViewModels.Add(fileSendViewModel);
+                WeakReferenceMessenger.Default.Send(fileSendViewModel, "AddSendFileRecord");
+                await _easyTcpClient.SendAsync(new Packet<ApplyFileTransfer>()
+                {
+                    MessageType = MessageType.ApplyTrasnfer,
+                    Body = new ApplyFileTransfer(fileInfo.Name, record.Id, fileInfo.Length, 0, code, Token)
+                }.Serialize());
             }
             catch (Exception ex)
             {

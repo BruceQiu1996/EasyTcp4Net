@@ -1,11 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using EasyTcp4Net;
 using FileTransfer.Common.Dtos;
 using FileTransfer.Common.Dtos.Messages;
 using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
+using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System.Buffers.Binary;
+using System.IO;
 using System.Windows;
 
 namespace FileTransfer.ViewModels
@@ -19,7 +22,7 @@ namespace FileTransfer.ViewModels
         public string SessionToken { get; private set; } = Guid.NewGuid().ToString();
         public DateTime? LastConnectedTime { get; set; }
         public string RemoteEndPoint => Session.RemoteEndPoint.ToString();
-
+        private readonly List<FileReceiveViewModel> fileReceiveViewModels = new List<FileReceiveViewModel>();
         public ClientConnectedViewModel(ClientSession clientSession)
         {
             Session = clientSession;
@@ -42,6 +45,41 @@ namespace FileTransfer.ViewModels
                 case MessageType.ApplyTrasnfer:
                     {
                         var packet = Packet<ApplyFileTransfer>.FromBytes(data);
+
+                        if (string.IsNullOrEmpty(packet.Body.FileName) || string.IsNullOrEmpty(packet.Body.Code)
+                            || string.IsNullOrEmpty(packet.Body.FileSendId))
+                        {
+                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                            {
+                                MessageType = MessageType.ApplyTrasnferAck,
+                                Body = new ApplyFileTransferAck()
+                                {
+                                    Approve = false,
+                                    Message = "传输文件数据异常"
+                                }
+                            }.Serialize());
+
+                            return;
+                        }
+
+                        var fileHelper = App.ServiceProvider.GetRequiredService<FileHelper>();
+                        var iniSettings = App.ServiceProvider.GetRequiredService<IniSettings>();
+                        var canSave = fileHelper.PathCanSave(iniSettings.FileSaveLocation, packet.Body.TotalSize);
+                        if (!canSave)
+                        {
+                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                            {
+                                MessageType = MessageType.ApplyTrasnferAck,
+                                Body = new ApplyFileTransferAck()
+                                {
+                                    Approve = false,
+                                    Message = "目标机器存储空间异常"
+                                }
+                            }.Serialize());
+
+                            return;
+                        }
+
                         if (packet.Body!.SessionToken != SessionToken)
                         {
                             await Session.SendAsync(new Packet<ApplyFileTransferAck>()
@@ -87,13 +125,23 @@ namespace FileTransfer.ViewModels
                                     }
                                 });
                             }
-
+                            //创建任务
+                            //创建一个临时文件
+                            var tempLocation = Path.Combine(iniSettings.FileSaveLocation, $"{Path.GetRandomFileName()}.tmp");
+                            File.Create(tempLocation).Close();
+                            var task = new FileReceiveRecordModel(packet.Body.FileName, packet.Body.Code, packet.Body.TotalSize, tempLocation,
+                                packet.Body.FileSendId, RemoteEndPoint);
+                            await App.ServiceProvider.GetRequiredService<DBHelper>().AddFileReceiveRecordAsync(task);
+                            var fileReceiveViewModel = FileReceiveViewModel.FromModel(task);
+                            fileReceiveViewModels.Add(fileReceiveViewModel);
+                            WeakReferenceMessenger.Default.Send(fileReceiveViewModel, "AddReceiveFileRecord");
                             await Session.SendAsync(new Packet<ApplyFileTransferAck>()
                             {
                                 MessageType = MessageType.ApplyTrasnferAck,
                                 Body = new ApplyFileTransferAck()
                                 {
                                     Approve = true,
+                                    FileSendId = packet.Body.FileSendId,
                                     Token = Guid.NewGuid().ToString()
                                 }
                             }.Serialize());

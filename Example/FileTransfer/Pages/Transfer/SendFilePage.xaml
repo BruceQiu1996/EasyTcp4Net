@@ -4,10 +4,15 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:hc="https://handyorg.github.io/handycontrol"
+      xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
       Title="SendFilePage">
-
+    <behaviors:Interaction.Triggers>
+        <behaviors:EventTrigger EventName="Loaded">
+            <behaviors:InvokeCommandAction Command="{Binding LoadCommandAsync}"></behaviors:InvokeCommandAction>
+        </behaviors:EventTrigger>
+    </behaviors:Interaction.Triggers>
     <Grid>
         <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1">
             <Grid>
@@ -29,7 +34,7 @@
                         <Style TargetType="{x:Type ListBoxItem}">
                             <Setter Property="OverridesDefaultStyle" Value="True" />
                             <Setter Property="SnapsToDevicePixels" Value="True" />
-                            <Setter Property="Height" Value="35" />
+                            <Setter Property="Height" Value="45" />
                             <Setter Property="Foreground" Value="Black" />
                             <Setter Property="Template">
                                 <Setter.Value>
@@ -43,29 +48,54 @@
                                                 </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="*"></RowDefinition>
+                                                    <RowDefinition Height="0.5*"></RowDefinition>
                                                 </Grid.RowDefinitions>
 
-                                                <Grid Grid.Column="0">
+                                                <Grid Grid.Column="0" Margin="0 1 0 0">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Image Source="{Binding Icon}" Height="22" Margin="5 0 0 0"></Image>
                                                         <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="5 0 0 0">
                                                             <TextBlock Text="{Binding FileName}" 
                                                                        FontSize="11"
-                                                                       VerticalAlignment="Center" Margin="2 0 0 1"></TextBlock>
+                                                                       VerticalAlignment="Center" Margin="2 0 0 0"></TextBlock>
                                                             <TextBlock Text="{Binding SizeText}" 
                                                                        FontSize="10"
-                                                                       Margin="2 1 0 0" VerticalAlignment="Center" Foreground="#888"></TextBlock>
+                                                                       Margin="2 0 0 0" VerticalAlignment="Center" Foreground="#888"></TextBlock>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Grid>
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Vertical">
+                                                <StackPanel Margin="0 1 0 0" Grid.Column="1" VerticalAlignment="Center" Orientation="Vertical">
                                                     <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
                                                 </StackPanel>
 
                                                 <TextBlock Text="{Binding Status}" Grid.Column="2"
-                                                           HorizontalAlignment="Center"
+                                                           HorizontalAlignment="Left"
                                                            Foreground="#555"
+                                                           Margin="25 1 0 0"
                                                            VerticalAlignment="Center"
+                                                           ></TextBlock>
+
+                                                <TextBlock Text="目标主机：192.168.0.11（阿水）" 
+                                                           Grid.Column="0"
+                                                           FontSize="10"
+                                                           Margin="5 0 0 0"
+                                                           Foreground="#999"
+                                                           Grid.Row="1"></TextBlock>
+
+                                                <TextBlock Text="350.5kb/s"
+                                                           Grid.Row="1"
+                                                           FontSize="10"
+                                                           Foreground="#aaa"
+                                                            Grid.Column="1"
+                                                           ></TextBlock>
+
+                                                <TextBlock Text="传输中断"
+                                                           FontSize="10"
+                                                           Grid.Row="1"
+                                                           Margin="25 0 0 0"
+                                                           Foreground="#999"
+                                                           HorizontalAlignment="Left"
+                                                            Grid.Column="2"
                                                            ></TextBlock>
                                             </Grid>
                                         </Border>

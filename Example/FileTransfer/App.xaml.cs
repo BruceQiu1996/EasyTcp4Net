@@ -46,6 +46,7 @@ namespace FileTransfer
                 service.AddSingleton<NetHelper>();
                 service.AddSingleton<DBHelper>();
                 service.AddSingleton<FileHelper>();
+                service.AddSingleton<GrowlHelper>();
 
                 var connString = $"Data Source = {Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage.db")}";
                 service.AddDbContext<FileTransferDbContext>(option =>

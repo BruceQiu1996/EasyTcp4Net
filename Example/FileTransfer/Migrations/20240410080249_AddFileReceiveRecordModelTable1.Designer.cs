@@ -3,6 +3,7 @@ using System;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FileTransfer.Migrations
 {
     [DbContext(typeof(FileTransferDbContext))]
-    partial class FileTransferDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240410080249_AddFileReceiveRecordModelTable1")]
+    partial class AddFileReceiveRecordModelTable1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.3");
