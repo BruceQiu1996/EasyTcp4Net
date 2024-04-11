@@ -22,7 +22,7 @@ namespace FileTransfer.ViewModels
         public string SessionToken { get; private set; } = Guid.NewGuid().ToString();
         public DateTime? LastConnectedTime { get; set; }
         public string RemoteEndPoint => Session.RemoteEndPoint.ToString();
-        private readonly List<FileReceiveViewModel> fileReceiveViewModels = new List<FileReceiveViewModel>();
+        private readonly Dictionary<string,FileReceiveViewModel> _fileReceiveViewModels = new Dictionary<string,FileReceiveViewModel>();
         public ClientConnectedViewModel(ClientSession clientSession)
         {
             Session = clientSession;
@@ -55,6 +55,7 @@ namespace FileTransfer.ViewModels
                                 Body = new ApplyFileTransferAck()
                                 {
                                     Approve = false,
+                                    FileSendId = packet.Body.FileSendId,
                                     Message = "传输文件数据异常"
                                 }
                             }.Serialize());
@@ -72,6 +73,7 @@ namespace FileTransfer.ViewModels
                                 MessageType = MessageType.ApplyTrasnferAck,
                                 Body = new ApplyFileTransferAck()
                                 {
+                                    FileSendId = packet.Body.FileSendId,
                                     Approve = false,
                                     Message = "目标机器存储空间异常"
                                 }
@@ -88,6 +90,7 @@ namespace FileTransfer.ViewModels
                                 Body = new ApplyFileTransferAck()
                                 {
                                     Approve = false,
+                                    FileSendId = packet.Body.FileSendId,
                                     Message = "会话密钥错误"
                                 }
                             }.Serialize());
@@ -95,12 +98,29 @@ namespace FileTransfer.ViewModels
                             return;
                         }
 
-                        if (packet.Body.StartIndex == 0 && string.IsNullOrEmpty(packet.Body.TransferToken)) //新发送的文件
+                        if (_fileReceiveViewModels.ContainsKey(packet.Body.FileSendId))
+                        {
+                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                            {
+                                MessageType = MessageType.ApplyTrasnferAck,
+                                Body = new ApplyFileTransferAck()
+                                {
+                                    Approve = false,
+                                    FileSendId = packet.Body.FileSendId,
+                                    Message = "传输任务已存在"
+                                }
+                            }.Serialize());
+
+                            return;
+                        }
+
+                        if (packet.Body.StartIndex == 0 && string.IsNullOrEmpty(packet.Body.TransferToken)) //新发送的文件TODO 根据fileSendid，sha256判断是新的传输还是断点续传,以及是否允许断点续传
                         {
                             var allow =
                                 App.ServiceProvider!.GetRequiredService<IniSettings>().AgreeTransfer;
                             if (!allow)
                             {
+                                var agree = true;
                                 //弹窗确认
                                 await Application.Current.Dispatcher.InvokeAsync(async () =>
                                 {
@@ -117,13 +137,18 @@ namespace FileTransfer.ViewModels
                                             Body = new ApplyFileTransferAck()
                                             {
                                                 Approve = false,
+                                                FileSendId = packet.Body.FileSendId,
                                                 Message = "对方未同意"
                                             }
                                         }.Serialize());
 
-                                        return;
+                                        agree = false;
                                     }
+
+                                    agree = true;
                                 });
+
+                                if (!agree) return;
                             }
                             //创建任务
                             //创建一个临时文件
@@ -132,8 +157,9 @@ namespace FileTransfer.ViewModels
                             var task = new FileReceiveRecordModel(packet.Body.FileName, packet.Body.Code, packet.Body.TotalSize, tempLocation,
                                 packet.Body.FileSendId, RemoteEndPoint);
                             await App.ServiceProvider.GetRequiredService<DBHelper>().AddFileReceiveRecordAsync(task);
-                            var fileReceiveViewModel = FileReceiveViewModel.FromModel(task);
-                            fileReceiveViewModels.Add(fileReceiveViewModel);
+                            var transferToken = Guid.NewGuid().ToString();
+                            var fileReceiveViewModel = FileReceiveViewModel.FromModel(task); //通过数据库接收文件模型创建接收文件视图模型
+                            _fileReceiveViewModels.Add(fileReceiveViewModel.FileSendId, fileReceiveViewModel); //视图模型添加到该客户端连接中
                             WeakReferenceMessenger.Default.Send(fileReceiveViewModel, "AddReceiveFileRecord");
                             await Session.SendAsync(new Packet<ApplyFileTransferAck>()
                             {
@@ -142,15 +168,22 @@ namespace FileTransfer.ViewModels
                                 {
                                     Approve = true,
                                     FileSendId = packet.Body.FileSendId,
-                                    Token = Guid.NewGuid().ToString()
+                                    Token = fileReceiveViewModel.TransferToken
                                 }
                             }.Serialize());
                         }
-
-                        //断点续传
-                        if (!string.IsNullOrEmpty(packet.Body.TransferToken))
+                    }
+                break;
+                case MessageType.FileSend:
+                    {
+                        var packet = Packet<FileSegement>.FromBytes(data);
+                        if (_fileReceiveViewModels.ContainsKey(packet.Body.FileSendId))
                         {
-
+                            await _fileReceiveViewModels[packet.Body.FileSendId].ReceiveDataAsync(packet.Body);
+                        }
+                        else 
+                        {
+                            //TODO不处理数据或者返回错误提示，让发送端停止发送
                         }
                     }
                     break;

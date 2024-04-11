@@ -91,17 +91,20 @@ namespace FileTransfer.ViewModels
             int segement = 1; //总共的段数
             var fileHelper = App.ServiceProvider.GetRequiredService<FileHelper>();
             long needTransfer = fileInfo.Length - startIndex;
-            //分段
-            if (needTransfer > bufferSize)
-            {
-                segement = (int)(needTransfer / (1024 * 100));
-            }
-
-            await Task.Run(async () =>
+            var _ = Task.Run(async () =>
             {
                 using (var fileStream = File.OpenRead(FileLocation))
                 {
                     byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+                    //分段
+                    if (needTransfer > buffer.Length)
+                    {
+                        segement = (int)(needTransfer / buffer.Length);
+                        if (needTransfer % buffer.Length != 0)
+                        {
+                            segement++;
+                        }
+                    }
                     try
                     {
                         var totalLength = fileInfo.Length;
@@ -137,6 +140,7 @@ namespace FileTransfer.ViewModels
                                     Speed = speed;
                                     Progress = progress;
                                 });
+                                _lastRecordSend = DateTime.Now;
                             }
                         }
                     }
@@ -146,7 +150,7 @@ namespace FileTransfer.ViewModels
                     }
                     finally
                     {
-                        ArrayPool<byte>.Shared.Return(buffer);
+                        ArrayPool<byte>.Shared.Return(buffer, true);
                     }
                 }
             });

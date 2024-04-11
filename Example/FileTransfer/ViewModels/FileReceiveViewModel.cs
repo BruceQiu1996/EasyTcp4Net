@@ -1,7 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace FileTransfer.ViewModels
@@ -43,20 +45,46 @@ namespace FileTransfer.ViewModels
             set => SetProperty(ref _speed, value);
         }
 
+        public string FileSendId { get; private set; }
+
         public FileReceiveViewModel() { }
 
         public static FileReceiveViewModel FromModel(FileReceiveRecordModel model)
         {
             FileReceiveViewModel fileReceiveViewModel = new FileReceiveViewModel();
             fileReceiveViewModel.Id = model.Id;
+
             fileReceiveViewModel.FileName = model.FileName;
+            fileReceiveViewModel.FileSendId = model.FileSendId;
             fileReceiveViewModel.TempFileLocation = model.TempFileSaveLocation;
             fileReceiveViewModel.Status = model.Status;
             fileReceiveViewModel.Size = model.TotalSize;
             fileReceiveViewModel.Progress = fileReceiveViewModel.Size == 0 ? 100 : fileReceiveViewModel.TransferBytes * 100 / fileReceiveViewModel.Size;
             fileReceiveViewModel.RemoteEndpoint = model.LastRemoteEndpoint;
+            fileReceiveViewModel.TransferToken = Guid.NewGuid().ToString();
 
             return fileReceiveViewModel;
+        }
+
+        public async Task<(bool, string)> ReceiveDataAsync(FileSegement fileSegement)
+        {
+            (bool, string) result = (true, null);
+            if (fileSegement.TransferToken != TransferToken || fileSegement.FileSendId != FileSendId)
+                return (false, "Token或者ID错误");
+
+            FileInfo fileInfo = new FileInfo(TempFileLocation);
+            using (var fileStream = File.OpenWrite(TempFileLocation))
+            {
+                fileStream.Seek(fileInfo.Length, SeekOrigin.Begin);
+                await fileStream.WriteAsync(fileSegement.Data);
+            }
+
+            if (fileSegement.TotalSegement == fileSegement.SegementIndex)
+            {
+                //判断sha256 TODO
+            }
+
+            return result;
         }
     }
 }

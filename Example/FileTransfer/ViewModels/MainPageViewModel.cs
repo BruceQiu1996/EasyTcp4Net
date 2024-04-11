@@ -194,6 +194,7 @@ namespace FileTransfer.ViewModels
                 _easyTcpServer = new EasyTcpServer(_settings.Port);
                 _easyTcpServer.OnClientConnectionChanged += OnNewClientConnectedAsync!;
                 _easyTcpServer.OnReceivedData += OnReceiveDataAsync!;
+                _easyTcpServer.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
                 _easyTcpServer.StartListen();
                 StartListening = true;
             }

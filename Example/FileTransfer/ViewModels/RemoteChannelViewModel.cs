@@ -60,7 +60,7 @@ namespace FileTransfer.ViewModels
             {
                 ConnectRetryTimes = 3
             });
-
+            _easyTcpClient.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
             _easyTcpClient.OnDisConnected += (obj, e) =>
             {
                 Status = "连接断开";

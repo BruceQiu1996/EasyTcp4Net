@@ -10,6 +10,12 @@ namespace FileTransfer.Common.Core
     {
         private static object _lock = new object();
 
+        /// <summary>
+        /// 字节数添加int8数字，默认大端
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="v"></param>
         public static void AddInt8(this byte[] buffer, int startIndex, byte v)
         {
             lock (_lock)
@@ -18,6 +24,12 @@ namespace FileTransfer.Common.Core
             }
         }
 
+        /// <summary>
+        /// 字节数添加int32数字，默认大端
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="v"></param>
         public static void AddInt32(this byte[] buffer, int startIndex, int v)
         {
             lock (_lock)
@@ -29,6 +41,12 @@ namespace FileTransfer.Common.Core
             }
         }
 
+        /// <summary>
+        /// 字节数添加int64数字，默认大端
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="startIndex"></param>
+        /// <param name="v"></param>
         public static void AddInt64(this byte[] buffer, int startIndex, long v)
         {
             lock (_lock)

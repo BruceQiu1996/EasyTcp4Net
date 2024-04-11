@@ -5,6 +5,7 @@ using FileTransfer.Models;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace FileTransfer.ViewModels.Transfer
 {
@@ -26,7 +27,10 @@ namespace FileTransfer.ViewModels.Transfer
             WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
                 FileSendViewModel, string>(this, "AddSendFileRecord", async (x, y) =>
                 {
-                    FileSendViewModels.Add(y);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        FileSendViewModels.Add(y);
+                    });
                 });
 
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);

@@ -35,7 +35,7 @@ namespace FileTransfer.Models
             FileName = fileName;
             Code = code;
             TotalSize = totalSize;
-            Status = FileSendStatus.Transfering;
+            Status = FileReceiveStatus.Transfering;
             TempFileSaveLocation = tempfileSaveLocation;
             FileSendId = fileSendId;
             LastRemoteEndpoint = lastRemoteEndpoint;

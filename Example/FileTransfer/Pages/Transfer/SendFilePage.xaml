@@ -75,14 +75,14 @@
                                                            VerticalAlignment="Center"
                                                            ></TextBlock>
 
-                                                <TextBlock Text="目标主机：192.168.0.11（阿水）" 
+                                                <TextBlock Text="{Binding Remote}" 
                                                            Grid.Column="0"
-                                                           FontSize="10"
+                                                           FontSize="9.5"
                                                            Margin="5 0 0 0"
                                                            Foreground="#999"
                                                            Grid.Row="1"></TextBlock>
 
-                                                <TextBlock Text="350.5kb/s"
+                                                <TextBlock Text="12"
                                                            Grid.Row="1"
                                                            FontSize="10"
                                                            Foreground="#aaa"
