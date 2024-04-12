@@ -56,7 +56,10 @@ namespace FileTransfer.ViewModels.Transfer
                    Application.Current.Dispatcher.Invoke(() =>
                    {
                        var viewModel = FileReceiveViewModels.FirstOrDefault(x => x.Id == y);
-                       FileReceiveViewModels.Remove(viewModel);
+                       if (viewModel != null)
+                       {
+                           FileReceiveViewModels.Remove(viewModel);
+                       }
                    });
                });
 

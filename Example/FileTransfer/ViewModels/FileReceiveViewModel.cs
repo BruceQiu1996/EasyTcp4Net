@@ -108,7 +108,6 @@ namespace FileTransfer.ViewModels
 
         public async Task NormolCompletedAsync()
         {
-            Status = FileReceiveStatus.Completed;
             var fileHelper = App.ServiceProvider!.GetRequiredService<FileHelper>();
             var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
             //生成新文件

@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using EasyTcp4Net;
 using FileTransfer.Common.Dtos;
 using FileTransfer.Common.Dtos.Transfer;
@@ -134,6 +135,16 @@ namespace FileTransfer.ViewModels
                     }
                 }
             });
+
+            await NormolCompletedAsync();
+        }
+
+        public async Task NormolCompletedAsync()
+        {
+            var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
+            //更新数据库
+            await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, true);
+            WeakReferenceMessenger.Default.Send(Id, "SendFinish");
         }
     }
 }

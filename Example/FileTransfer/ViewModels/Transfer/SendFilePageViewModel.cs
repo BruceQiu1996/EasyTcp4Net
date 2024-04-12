@@ -45,6 +45,19 @@ namespace FileTransfer.ViewModels.Transfer
                     }
                 });
 
+            WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
+                string, string>(this, "SendFinish", async (x, y) =>
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var viewModel = FileSendViewModels!.FirstOrDefault(x => x.Id == y);
+                        if (viewModel != null)
+                        {
+                            FileSendViewModels.Remove(viewModel);
+                        }
+                    });
+                });
+
             FileSendViewModels = new ObservableCollection<FileSendViewModel>();
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
             _fileTransferDbContext = fileTransferDbContext;
@@ -55,7 +68,8 @@ namespace FileTransfer.ViewModels.Transfer
         {
             if (_loaded) return;
             FileSendViewModels.Clear();
-            var records = await _fileTransferDbContext.FileSendRecords.Join(_fileTransferDbContext.RemoteChannels, x => x.RemoteId,
+            var records = await _fileTransferDbContext.FileSendRecords
+                .Join(_fileTransferDbContext.RemoteChannels, x => x.RemoteId,
                 x => x.Id, (x, y) =>
                 new FileSendWithRemoteChannelModel
                 {
