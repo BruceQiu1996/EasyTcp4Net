@@ -64,7 +64,7 @@
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Grid>
-                                                <StackPanel Margin="0 1 0 0" Grid.Column="1" VerticalAlignment="Center" Orientation="Vertical">
+                                                <StackPanel Margin="0 1 0 0" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center" Orientation="Vertical">
                                                     <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
                                                 </StackPanel>
 
@@ -75,19 +75,12 @@
                                                            VerticalAlignment="Center"
                                                            ></TextBlock>
 
-                                                <TextBlock Text="目标主机：192.168.0.11（阿水）" 
+                                                <TextBlock Text="{Binding RemoteEndpoint}" 
                                                            Grid.Column="0"
                                                            FontSize="10"
                                                            Margin="5 0 0 0"
                                                            Foreground="#999"
                                                            Grid.Row="1"></TextBlock>
-
-                                                <TextBlock Text="{Binding Speed,UpdateSourceTrigger=PropertyChanged}"
-                                                           Grid.Row="1"
-                                                           FontSize="10"
-                                                           Foreground="#aaa"
-                                                            Grid.Column="1"
-                                                           ></TextBlock>
 
                                                 <TextBlock Text="传输中断"
                                                            FontSize="10"

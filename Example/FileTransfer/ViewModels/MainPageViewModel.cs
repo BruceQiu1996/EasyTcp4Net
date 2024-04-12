@@ -7,6 +7,7 @@ using FileTransfer.Common.Dtos.Messages.Connection;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
 using FileTransfer.Resources;
+using FileTransfer.ViewModels.Transfer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -149,6 +150,8 @@ namespace FileTransfer.ViewModels
             {
                 _grolHelper.Warning("文件存储目录不存在");
             }
+            //加载发送和接收页
+            WeakReferenceMessenger.Default.Send(string.Empty, "Load");
             _loaded = true;
         }
 

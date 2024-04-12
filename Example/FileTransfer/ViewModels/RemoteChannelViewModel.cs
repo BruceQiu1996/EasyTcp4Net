@@ -49,7 +49,7 @@ namespace FileTransfer.ViewModels
 
         public string Token { get; private set; }
         private readonly EasyTcpClient _easyTcpClient;
-        private readonly List<FileSendViewModel> fileSendViewModels = new List<FileSendViewModel>();
+
         public RemoteChannelViewModel(string id, string ip, ushort port, string remark = null)
         {
             Id = id;
@@ -132,12 +132,6 @@ namespace FileTransfer.ViewModels
                 case MessageType.ApplyTrasnferAck:
                     {
                         var packet = Packet<ApplyFileTransferAck>.FromBytes(data);
-                        var recordVM = fileSendViewModels
-                                .FirstOrDefault(x => x.Id == packet.Body.FileSendId);
-
-                        if (recordVM == null)
-                            return;
-
                         if (!packet.Body.Approve)
                         {
                             App.ServiceProvider.GetRequiredService<GrowlHelper>()
@@ -156,7 +150,12 @@ namespace FileTransfer.ViewModels
                         }
                         else
                         {
-                            await recordVM.SendAsync(0, _easyTcpClient, packet.Body.Token);
+                            //开始某个发送任务
+                            //发送消息到发送文件界面
+                            //1.发送的client
+                            //2.发送任务ID
+                            //3.发送的transferToken
+                            WeakReferenceMessenger.Default.Send(new Tuple<EasyTcpClient, string, string>(_easyTcpClient, packet.Body.FileSendId, packet.Body.Token), "StartFileSend");
                         }
                     }
                     break;
@@ -192,7 +191,7 @@ namespace FileTransfer.ViewModels
                 using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
                     code = App.ServiceProvider!.GetRequiredService<FileHelper>().ToSHA256(fileStream);
-                    
+
                 }
                 //创建到数据库，并且添加到传输列表
                 var record = new FileSendRecordModel(file, fileInfo.Name, code, fileInfo.Length, Id);
@@ -206,7 +205,6 @@ namespace FileTransfer.ViewModels
 
                 //根据channel和发送记录生成发送任务viewmodel
                 var fileSendViewModel = FileSendViewModel.FromModel(record, channel);
-                fileSendViewModels.Add(fileSendViewModel);
                 WeakReferenceMessenger.Default.Send(fileSendViewModel, "AddSendFileRecord");
                 await _easyTcpClient.SendAsync(new Packet<ApplyFileTransfer>()
                 {

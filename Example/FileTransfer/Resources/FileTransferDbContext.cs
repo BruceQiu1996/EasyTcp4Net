@@ -7,7 +7,7 @@ namespace FileTransfer.Resources
     {
         public DbSet<RemoteChannelModel> RemoteChannels { get; set; }
         public DbSet<FileSendRecordModel> FileSendRecords { get; set; }
-        public DbSet<FileReceiveRecordModel> FileReceiveRecordModels { get; set; }
+        public DbSet<FileReceiveRecordModel> FileReceiveRecords { get; set; }
         public FileTransferDbContext(DbContextOptions<FileTransferDbContext> options) : base(options)
         {
         }

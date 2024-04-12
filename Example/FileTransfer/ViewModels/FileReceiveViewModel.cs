@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
@@ -26,7 +27,7 @@ namespace FileTransfer.ViewModels
             set
             {
                 _transferBytes = value;
-                Progress = TransferBytes / (double)Size * 100;
+                Progress = Size == 0 ? 100 : TransferBytes * 100 / Size;
             }
         }
         public string SizeText => App.ServiceProvider!.GetRequiredService<FileHelper>().ToSizeText(Size);
@@ -46,6 +47,7 @@ namespace FileTransfer.ViewModels
         }
 
         public string FileSendId { get; private set; }
+        public string Code { get; private set; }
 
         public FileReceiveViewModel() { }
 
@@ -60,8 +62,9 @@ namespace FileTransfer.ViewModels
             fileReceiveViewModel.Status = model.Status;
             fileReceiveViewModel.Size = model.TotalSize;
             fileReceiveViewModel.Progress = fileReceiveViewModel.Size == 0 ? 100 : fileReceiveViewModel.TransferBytes * 100 / fileReceiveViewModel.Size;
-            fileReceiveViewModel.RemoteEndpoint = model.LastRemoteEndpoint;
+            fileReceiveViewModel.RemoteEndpoint = $"来自：{model.LastRemoteEndpoint}";
             fileReceiveViewModel.TransferToken = Guid.NewGuid().ToString();
+            fileReceiveViewModel.Code = model.Code;
 
             return fileReceiveViewModel;
         }
@@ -77,14 +80,52 @@ namespace FileTransfer.ViewModels
             {
                 fileStream.Seek(fileInfo.Length, SeekOrigin.Begin);
                 await fileStream.WriteAsync(fileSegement.Data);
+                TransferBytes += fileSegement.Data.Length;
             }
 
             if (fileSegement.TotalSegement == fileSegement.SegementIndex)
             {
-                //判断sha256 TODO
+                //发送完成判断sha265
+                string code = null; //sha265
+                using (var fileStream = new FileStream(TempFileLocation, FileMode.Open, FileAccess.Read))
+                {
+                    code = App.ServiceProvider!.GetRequiredService<FileHelper>().ToSHA256(fileStream);
+                }
+
+                if (code == Code)
+                {
+                    //TODO异常结束
+                    await NormolCompletedAsync();
+                }
+                else
+                {
+
+                }
             }
 
             return result;
+        }
+
+        public async Task NormolCompletedAsync()
+        {
+            Status = FileReceiveStatus.Completed;
+            var fileHelper = App.ServiceProvider!.GetRequiredService<FileHelper>();
+            var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
+            //生成新文件
+            var canMove = true;
+            var newFilePath = fileHelper.GetAvailableFileLocation(FileName, Path.GetDirectoryName(TempFileLocation)!);
+            try
+            {
+                File.Move(TempFileLocation, newFilePath);
+            }
+            catch (Exception ex)
+            {
+                //TODO日志
+                canMove = false;
+            }
+            //更新数据库
+            await dbHelper.UpdateFileReceiveRecordCompleteAsync(Id, newFilePath, canMove, canMove ? null : "文件保存错误");
+            WeakReferenceMessenger.Default.Send(Id, "ReceiveFinish");
         }
     }
 }

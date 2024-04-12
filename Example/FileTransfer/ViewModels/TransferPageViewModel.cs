@@ -1,9 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using FileTransfer.Models;
 using FileTransfer.Pages.Transfer;
-using FileTransfer.ViewModels.Transfer;
 using System.Windows.Controls;
 
 namespace FileTransfer.ViewModels
@@ -38,11 +35,6 @@ namespace FileTransfer.ViewModels
             });
 
             CurrentPage = sendFilePage;
-
-            WeakReferenceMessenger.Default.Register<TransferPageViewModel, string, string>(this, "Load", async (x, y) =>
-            {
-                
-            });
         }
     }
 }

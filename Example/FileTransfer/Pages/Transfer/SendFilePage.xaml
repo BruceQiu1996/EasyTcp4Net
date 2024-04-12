@@ -64,8 +64,8 @@
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Grid>
-                                                <StackPanel Margin="0 1 0 0" Grid.Column="1" VerticalAlignment="Center" Orientation="Vertical">
-                                                    <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
+                                                <StackPanel Margin="0 1 0 0" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center" Orientation="Vertical">
+                                                    <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}" Maximum="100"></ProgressBar>
                                                 </StackPanel>
 
                                                 <TextBlock Text="{Binding Status}" Grid.Column="2"
@@ -75,14 +75,14 @@
                                                            VerticalAlignment="Center"
                                                            ></TextBlock>
 
-                                                <TextBlock Text="{Binding Remote}" 
+                                                <TextBlock Text="{Binding Remote,UpdateSourceTrigger=PropertyChanged}" 
                                                            Grid.Column="0"
                                                            FontSize="9.5"
                                                            Margin="5 0 0 0"
                                                            Foreground="#999"
                                                            Grid.Row="1"></TextBlock>
 
-                                                <TextBlock Text="12"
+                                                <TextBlock Text="{Binding Speed,UpdateSourceTrigger=PropertyChanged}"
                                                            Grid.Row="1"
                                                            FontSize="10"
                                                            Foreground="#aaa"

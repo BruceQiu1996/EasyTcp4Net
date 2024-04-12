@@ -168,5 +168,20 @@ namespace FileTransfer.Helpers
 
             return false;
         }
+
+        public string GetAvailableFileLocation(string fileName, string folder)
+        {
+            var newName = Path.Combine(folder, fileName);
+            var onlyName = Path.GetFileNameWithoutExtension(fileName);
+            var extension = Path.GetExtension(fileName);
+            int count = 1;
+            while (File.Exists(newName))
+            {
+                newName = Path.Combine(folder, $"{onlyName}({count}){extension}");
+                count++;
+            }
+
+            return newName;
+        }
     }
 }

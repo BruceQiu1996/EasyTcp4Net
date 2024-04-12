@@ -61,7 +61,7 @@ namespace FileTransfer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FileReceiveRecordModels");
+                    b.ToTable("FileReceiveRecords");
                 });
 
             modelBuilder.Entity("FileTransfer.Models.FileSendRecordModel", b =>

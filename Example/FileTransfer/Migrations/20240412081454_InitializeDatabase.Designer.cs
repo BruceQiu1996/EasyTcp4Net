@@ -11,14 +11,61 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FileTransfer.Migrations
 {
     [DbContext(typeof(FileTransferDbContext))]
-    [Migration("20240409092323_AddFileSendRecordTable")]
-    partial class AddFileSendRecordTable
+    [Migration("20240412081454_InitializeDatabase")]
+    partial class InitializeDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.3");
+
+            modelBuilder.Entity("FileTransfer.Models.FileReceiveRecordModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileSaveLocation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileSendId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FinishTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastRemoteEndpoint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TempFileSaveLocation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("TotalSize")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FileReceiveRecords");
+                });
 
             modelBuilder.Entity("FileTransfer.Models.FileSendRecordModel", b =>
                 {
@@ -55,9 +102,6 @@ namespace FileTransfer.Migrations
 
                     b.Property<long>("TotalSize")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("TransferToken")
-                        .HasColumnType("TEXT");
 
                     b.Property<long>("TransferedSize")
                         .HasColumnType("INTEGER");

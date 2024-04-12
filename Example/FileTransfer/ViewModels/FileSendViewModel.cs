@@ -7,7 +7,6 @@ using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.IO;
-using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace FileTransfer.ViewModels
@@ -39,14 +38,10 @@ namespace FileTransfer.ViewModels
         public double Progress
         {
             get => _progress;
-            set => SetProperty(ref _progress, value);
-        }
-
-        private string _speed;
-        public string Speed
-        {
-            get => _speed;
-            set => SetProperty(ref _speed, value);
+            set
+            {
+                SetProperty(ref _progress, value);
+            }
         }
 
         public string Remote { get; set; }
@@ -75,23 +70,20 @@ namespace FileTransfer.ViewModels
         /// <param name="startIndex"></param>
         /// <param name="easyTcpClient"></param>
         /// <returns></returns>
-        public async Task SendAsync(int startIndex, EasyTcpClient easyTcpClient, string transferToken)
+        public async Task SendAsync(EasyTcpClient easyTcpClient, string transferToken)
         {
             TransferToken = transferToken;
             FileInfo fileInfo = new FileInfo(FileLocation);
-            if (startIndex >= fileInfo.Length)
+            if (TransferBytes >= fileInfo.Length)
             {
                 //文件传输完成
             }
 
-            var sended = startIndex;
-            int bufferSize = 1024 * 100;
-            DateTime _lastRecordSend = DateTime.Now; //区间测速的时间
-            long recordTransferedBytes = 0;//区间测速的字节数
+            int bufferSize = 1024 * 400;
             int segement = 1; //总共的段数
             var fileHelper = App.ServiceProvider.GetRequiredService<FileHelper>();
-            long needTransfer = fileInfo.Length - startIndex;
-            var _ = Task.Run(async () =>
+            long needTransfer = fileInfo.Length - TransferBytes;
+            await Task.Run(async () =>
             {
                 using (var fileStream = File.OpenRead(FileLocation))
                 {
@@ -108,9 +100,9 @@ namespace FileTransfer.ViewModels
                     try
                     {
                         var totalLength = fileInfo.Length;
-                        fileStream.Seek(startIndex, SeekOrigin.Begin);
+                        fileStream.Seek(TransferBytes, SeekOrigin.Begin);
                         int segementIndex = 1;
-                        while (sended < totalLength)
+                        while (TransferBytes < totalLength)
                         {
 
                             var length = await fileStream.ReadAsync(buffer);
@@ -125,28 +117,16 @@ namespace FileTransfer.ViewModels
                                     FileSendId = Id,
                                     TransferToken = TransferToken
                                 }
-                            }.Serialize()).ConfigureAwait(true);
+                            }.Serialize());
                             segementIndex++;
-                            sended += length;
-                            recordTransferedBytes += length;
-                            //记录速度以及更新传输百分比
-                            if (DateTime.Now.AddSeconds(-1) >= _lastRecordSend)
-                            {
-                                var speed = $"{fileHelper.ToSizeText(recordTransferedBytes)} / s";
-                                var progress = sended * 100 / totalLength;
-
-                                Application.Current.Dispatcher.Invoke(() =>
-                                {
-                                    Speed = speed;
-                                    Progress = progress;
-                                });
-                                _lastRecordSend = DateTime.Now;
-                            }
+                            TransferBytes += length;
                         }
                     }
                     catch (Exception ex)
                     {
                         //TODO异常结束发送
+                        //结束发送并且暂停发送
+
                     }
                     finally
                     {
