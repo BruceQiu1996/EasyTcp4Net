@@ -21,12 +21,9 @@ namespace FileTransfer.Models
         public FileSendStatus Status { get; set; }
         public string? Message { get; set; }
 
-        public FileSendRecordModel()
-        {
+        public FileSendRecordModel() { }
 
-        }
-
-        public FileSendRecordModel(string location, string fileName,string code, long totalSize, string remote)
+        public FileSendRecordModel(string location, string fileName, string code, long totalSize, string remote)
         {
             FileName = fileName;
             FileLocation = location;
@@ -43,5 +40,6 @@ namespace FileTransfer.Models
         Transfering = 2, //传输中
         Completed = 3, //完成
         Faild = 4, //传输失败
+        Pausing = 5,//暂停中
     }
 }

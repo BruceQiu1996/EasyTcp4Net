@@ -60,7 +60,7 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <Label Content="传输列表" HorizontalAlignment="Left"
+                    <Label Content="{Binding TransferListText,UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left"
                            Style="{StaticResource LabelPrimary}"
                            Cursor="Hand"
                            Margin="80 5 0 5" >

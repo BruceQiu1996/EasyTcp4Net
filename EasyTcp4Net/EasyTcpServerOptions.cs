@@ -112,7 +112,7 @@ namespace EasyTcp4Net
         /// 是否开启空闲连接检查
         /// 默认值: false
         /// </summary>
-        public bool IdleSessionsCheck { get; set; } = true;
+        public bool IdleSessionsCheck { get; set; } = false;
         
         private int _checkSessionsIdleMs { get; set; } = 300 * 1000;
         /// <summary>

@@ -40,6 +40,38 @@
                                 <Setter.Value>
                                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                         <Border Margin="0 0 4 1" CornerRadius="2" BorderThickness="0 0 0 0.6" Background="White" BorderBrush="#ddd">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <ContextMenu.Resources>
+                                                        <Style TargetType="MenuItem">
+                                                            <Setter Property="Padding" Value="0"></Setter>
+                                                            <Setter Property="Width" Value="100"></Setter>
+                                                            <Setter Property="Cursor" Value="Hand"></Setter>
+                                                            <Setter Property="Height" Value="28"></Setter>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="MenuItem">
+                                                                        <Border Background="{TemplateBinding Background}">
+                                                                            <TextBlock Text="{TemplateBinding Header}" HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"></TextBlock>
+                                                                        </Border>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#eee"></Setter>
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseOver" Value="False">
+                                                                    <Setter Property="Background" Value="White"></Setter>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ContextMenu.Resources>
+                                                    <MenuItem Header="暂停" Command="{Binding PauseCommand}"></MenuItem>
+                                                    <MenuItem Header="继续" Command="{Binding ContinueCommand}"></MenuItem>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"></ColumnDefinition>

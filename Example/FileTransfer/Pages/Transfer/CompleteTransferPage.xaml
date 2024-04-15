@@ -16,6 +16,18 @@
         </behaviors:EventTrigger>
     </behaviors:Interaction.Triggers>
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="38"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <hc:Card Grid.Row="0" Margin="0 1" BorderThickness="0">
+            <Grid>
+                <Button Content="清除记录" Margin="5 0" 
+                        Cursor="Hand"
+                        HorizontalAlignment="Right"></Button>
+            </Grid>
+        </hc:Card>
+
         <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1">
             <Grid>
                 <ListBox ScrollViewer.CanContentScroll="False"
@@ -41,7 +53,9 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                        <Border Margin="0 0 4 1" CornerRadius="2" BorderThickness="0 0 0 0.6" Background="White" BorderBrush="#ddd">
+                                        <Border Margin="0 0 4 1" CornerRadius="2" BorderThickness="0 0 0 0.6"
+                                                Cursor="Hand"
+                                                Background="{TemplateBinding Background}" BorderBrush="#ddd">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"></ColumnDefinition>

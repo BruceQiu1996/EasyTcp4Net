@@ -35,7 +35,7 @@ namespace FileTransfer.ViewModels
                 FileName = fileReceiveRecordModel.FileName,
                 Size = fileReceiveRecordModel.TotalSize,
                 FinishTime = fileReceiveRecordModel.FinishTime == null ? DateTime.MaxValue : fileReceiveRecordModel.FinishTime.Value,
-                Direction = "发送",
+                Direction = "接收",
                 Message = fileReceiveRecordModel.Status == FileReceiveStatus.Completed ? "已完成" : fileReceiveRecordModel.Message
             };
         }

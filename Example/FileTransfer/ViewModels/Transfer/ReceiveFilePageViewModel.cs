@@ -30,7 +30,7 @@ namespace FileTransfer.ViewModels.Transfer
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        FileReceiveViewModels.Add(y);
+                        AddRecordViewModel(y, 0);
                     });
                 });
 
@@ -58,7 +58,7 @@ namespace FileTransfer.ViewModels.Transfer
                        var viewModel = FileReceiveViewModels.FirstOrDefault(x => x.Id == y);
                        if (viewModel != null)
                        {
-                           FileReceiveViewModels.Remove(viewModel);
+                           RemoveRecordViewModel(viewModel);
                        }
                    });
                });
@@ -77,9 +77,29 @@ namespace FileTransfer.ViewModels.Transfer
 
             records.ForEach(x =>
             {
-                FileReceiveViewModels.Add(FileReceiveViewModel.FromModel(x));
+                AddRecordViewModel(FileReceiveViewModel.FromModel(x));
             });
+
             _loaded = true;
+        }
+
+        public void AddRecordViewModel(FileReceiveViewModel fileReceiveViewModel, int insertIndex = -1)
+        {
+            if (insertIndex == -1)
+                FileReceiveViewModels.Add(fileReceiveViewModel);
+            else if (insertIndex >= 0)
+            {
+                FileReceiveViewModels.Insert(insertIndex, fileReceiveViewModel);
+            }
+
+            WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
+        }
+
+        public void RemoveRecordViewModel(FileReceiveViewModel fileReceiveViewModel)
+        {
+            FileReceiveViewModels.Remove(fileReceiveViewModel);
+
+            WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
         }
     }
 }

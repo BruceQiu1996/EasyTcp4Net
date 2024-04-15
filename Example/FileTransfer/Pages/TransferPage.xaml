@@ -45,7 +45,7 @@
                             </Style.Triggers>
                         </Style>
                     </ListBoxItem.Style>
-                    <hc:Badge Background="Red" Foreground="White" Text="{Binding UploadingTasksCountText}" Padding="4.5 0"
+                    <hc:Badge Background="Red" Foreground="White" Text="{Binding SendingCount}" Padding="4.5 0"
                           BadgeMargin="20 -3 -13 0" BorderThickness="0">
                         <StackPanel Orientation="Horizontal">
                             <Label BorderThickness="0"
@@ -89,7 +89,7 @@
                             <behaviors:InvokeCommandAction Command="{Binding OpenReceiveFilePageCommand}"></behaviors:InvokeCommandAction>
                         </behaviors:EventTrigger>
                     </behaviors:Interaction.Triggers>
-                    <hc:Badge Background="Red" Foreground="White" Text="{Binding DownloadingTasksCountText}" Padding="4.5 0"
+                    <hc:Badge Background="Red" Foreground="White" Text="{Binding ReceivingCount}" Padding="4.5 0"
                               BadgeMargin="20 -3 -13 0" BorderThickness="0">
                         <StackPanel Orientation="Horizontal">
                             <Label BorderThickness="0"

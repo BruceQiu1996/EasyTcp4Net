@@ -2,7 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using EasyTcp4Net;
-using FileTransfer.Common.Dtos;
 using FileTransfer.Models;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +24,7 @@ namespace FileTransfer.ViewModels.Transfer
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        FileSendViewModels!.Insert(0, y);
+                        AddRecordViewModel(y, 0);
                     });
                 });
 
@@ -36,16 +35,6 @@ namespace FileTransfer.ViewModels.Transfer
                 });
 
             WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
-                Tuple<EasyTcpClient, string, string>, string>(this, "StartFileSend", async (x, y) =>
-                {
-                    var viewModel = FileSendViewModels!.FirstOrDefault(x => x.Id == y.Item2);
-                    if (viewModel != null)
-                    {
-                        await viewModel.SendAsync(y.Item1, y.Item3); //client,token
-                    }
-                });
-
-            WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
                 string, string>(this, "SendFinish", async (x, y) =>
                 {
                     Application.Current.Dispatcher.Invoke(() =>
@@ -53,7 +42,7 @@ namespace FileTransfer.ViewModels.Transfer
                         var viewModel = FileSendViewModels!.FirstOrDefault(x => x.Id == y);
                         if (viewModel != null)
                         {
-                            FileSendViewModels.Remove(viewModel);
+                            RemoveRecordViewModel(viewModel);
                         }
                     });
                 });
@@ -80,10 +69,28 @@ namespace FileTransfer.ViewModels.Transfer
 
             records.ForEach(x =>
             {
-                FileSendViewModels.Add(FileSendViewModel.FromModel(x.FileSendRecordModel, x.RemoteChannelModel));
+                AddRecordViewModel(new FileSendViewModel(x.FileSendRecordModel, x.RemoteChannelModel));
             });
 
             _loaded = true;
+        }
+
+        public void AddRecordViewModel(FileSendViewModel fileSendViewModel, int insertIndex = -1)
+        {
+            if (insertIndex == -1)
+                FileSendViewModels.Add(fileSendViewModel);
+            else if (insertIndex >= 0)
+            {
+                FileSendViewModels.Insert(insertIndex, fileSendViewModel);
+            }
+
+            WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
+        }
+
+        public void RemoveRecordViewModel(FileSendViewModel fileSendViewModel)
+        {
+            FileSendViewModels.Remove(fileSendViewModel);
+            WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
         }
     }
 }

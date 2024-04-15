@@ -137,12 +137,8 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </ContextMenu.Resources>
-                                                            <MenuItem Header="连接" Command="{Binding ConnectCommandAsync}"/>
                                                             <MenuItem Header="删除" Command="{Binding ConnectCommandAsync}"/>
                                                             <MenuItem Header="编辑" Command="{Binding ConnectCommandAsync}"/>
-
-                                                            <MenuItem Header="断开连接" Command="{Binding ConnectCommandAsync}"/>
-
                                                             <MenuItem Header="发送文件" Command="{Binding SendFileCommandAsync}"/>
                                                         </ContextMenu>
                                                     </Border.ContextMenu>
@@ -150,25 +146,13 @@
                                                         <Path Data="{StaticResource computer}"
                                                               Margin="10 0 0 0"
                                                               Height="15"
+                                                              Fill="#555"
                                                               Stretch="Uniform">
-                                                            <Path.Style>
-                                                                <Style TargetType="Path">
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Connected}" Value="True">
-                                                                            <Setter Property="Fill" Value="Green"></Setter>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding Connected}" Value="False">
-                                                                            <Setter Property="Fill" Value="Gray"></Setter>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Path.Style>
-                                                            
                                                         </Path>
-                                                        <TextBlock Width="200" Margin="10 0 0 0" VerticalAlignment="Center" Text="{Binding Remark}"></TextBlock>
+                                                        <TextBlock Width="200" Margin="10 0 0 0" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding Remark}"></TextBlock>
                                                         <TextBlock Width="150" VerticalAlignment="Center" Text="{Binding IPAddress}"></TextBlock>
                                                         <TextBlock Width="150" VerticalAlignment="Center" Text="{Binding Port}"></TextBlock>
-                                                        <TextBlock Width="150" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Status}">
+                                                        <TextBlock Width="150" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Status}">
                                                         </TextBlock>
                                                     </StackPanel>
                                                 </Border>

@@ -89,6 +89,7 @@ namespace FileTransfer.ViewModels
             {
                 await AddRemoteChannelAsync(y.Item1, y.Item2, y.Item3);
             });
+           
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
             StartListeningCommandAsync = new AsyncRelayCommand(StartListeningAsync);
             StopListeningCommandAsync = new AsyncRelayCommand(StopListeningAsync);
