@@ -41,16 +41,6 @@ namespace FileTransfer.ViewModels.Transfer
                 });
 
             WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
-               FileSegement, string>(this, "ReceiveFileData", async (x, y) =>
-               {
-                   var viewModel = FileReceiveViewModels.FirstOrDefault(x => x.FileSendId == y.FileSendId);
-                   if (viewModel != null && viewModel.TransferToken == y.TransferToken)
-                   {
-                       await viewModel.ReceiveDataAsync(y);
-                   }
-               });
-
-            WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
                string, string>(this, "ReceiveFinish", async (x, y) =>
                {
                    Application.Current.Dispatcher.Invoke(() =>
@@ -77,7 +67,7 @@ namespace FileTransfer.ViewModels.Transfer
 
             records.ForEach(x =>
             {
-                AddRecordViewModel(FileReceiveViewModel.FromModel(x));
+                AddRecordViewModel(new FileReceiveViewModel(x));
             });
 
             _loaded = true;

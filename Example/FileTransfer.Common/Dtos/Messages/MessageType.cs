@@ -8,5 +8,6 @@
         ApplyTrasnferAck = 3,
 
         FileSend = 4,
+        CancelSend = 5
     }
 }

@@ -5,6 +5,7 @@ using FileTransfer.Helpers;
 using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
+using System.Threading;
 using System.Windows.Media.Imaging;
 
 namespace FileTransfer.ViewModels
@@ -49,38 +50,42 @@ namespace FileTransfer.ViewModels
         public string FileSendId { get; private set; }
         public string Code { get; private set; }
 
-        public FileReceiveViewModel() { }
-
-        public static FileReceiveViewModel FromModel(FileReceiveRecordModel model)
+        public FileReceiveViewModel(FileReceiveRecordModel model)
         {
-            FileReceiveViewModel fileReceiveViewModel = new FileReceiveViewModel();
-            fileReceiveViewModel.Id = model.Id;
-
-            fileReceiveViewModel.FileName = model.FileName;
-            fileReceiveViewModel.FileSendId = model.FileSendId;
-            fileReceiveViewModel.TempFileLocation = model.TempFileSaveLocation;
-            fileReceiveViewModel.Status = model.Status;
-            fileReceiveViewModel.Size = model.TotalSize;
-            fileReceiveViewModel.Progress = fileReceiveViewModel.Size == 0 ? 100 : fileReceiveViewModel.TransferBytes * 100 / fileReceiveViewModel.Size;
-            fileReceiveViewModel.RemoteEndpoint = $"来自：{model.LastRemoteEndpoint}";
-            fileReceiveViewModel.TransferToken = Guid.NewGuid().ToString();
-            fileReceiveViewModel.Code = model.Code;
-
-            return fileReceiveViewModel;
+            Id = model.Id;
+            FileName = model.FileName;
+            FileSendId = model.FileSendId;
+            TempFileLocation = model.TempFileSaveLocation;
+            Status = model.Status;
+            Size = model.TotalSize;
+            Progress = Size == 0 ? 100 : TransferBytes * 100 / Size;
+            RemoteEndpoint = $"来自：{model.LastRemoteEndpoint}";
+            TransferToken = Guid.NewGuid().ToString();
+            Code = model.Code;
         }
 
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         public async Task<(bool, string)> ReceiveDataAsync(FileSegement fileSegement)
         {
             (bool, string) result = (true, null);
-            if (fileSegement.TransferToken != TransferToken || fileSegement.FileSendId != FileSendId)
-                return (false, "Token或者ID错误");
+            if (fileSegement.FileSendId != FileSendId)
+                return (false, "传输任务ID错误");
 
-            FileInfo fileInfo = new FileInfo(TempFileLocation);
-            using (var fileStream = File.OpenWrite(TempFileLocation))
+            Console.WriteLine($"接收：{fileSegement.FileSendId}---{fileSegement.SegementIndex}");
+            try
             {
-                fileStream.Seek(fileInfo.Length, SeekOrigin.Begin);
-                await fileStream.WriteAsync(fileSegement.Data);
-                TransferBytes += fileSegement.Data.Length;
+                _semaphore.Wait();
+                FileInfo fileInfo = new FileInfo(TempFileLocation);
+                using (var fileStream = File.OpenWrite(TempFileLocation))
+                {
+                    fileStream.Seek(fileInfo.Length, SeekOrigin.Begin);
+                    await fileStream.WriteAsync(fileSegement.Data);
+                    TransferBytes += fileSegement.Data.Length;
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
             }
 
             if (fileSegement.TotalSegement == fileSegement.SegementIndex)
@@ -106,6 +111,10 @@ namespace FileTransfer.ViewModels
             return result;
         }
 
+        /// <summary>
+        /// 正常完成接收文件
+        /// </summary>
+        /// <returns></returns>
         public async Task NormolCompletedAsync()
         {
             var fileHelper = App.ServiceProvider!.GetRequiredService<FileHelper>();
@@ -124,6 +133,25 @@ namespace FileTransfer.ViewModels
             }
             //更新数据库
             await dbHelper.UpdateFileReceiveRecordCompleteAsync(Id, newFilePath, canMove, canMove ? null : "文件保存错误");
+            WeakReferenceMessenger.Default.Send(Id, "ReceiveFinish");
+        }
+
+        /// <summary>
+        /// 被动取消接收任务
+        /// </summary>
+        /// <returns></returns>
+        public async Task PassiveCancelAsync(CancelTransfer cancelTransfer)
+        {
+            if (cancelTransfer.FileSendId != FileSendId)
+                return;
+
+            var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
+            //更新数据库
+            await dbHelper.UpdateFileReceiveRecordCompleteAsync(Id, null, false, "发送端取消");
+            if (File.Exists(TempFileLocation))
+            {
+                File.Delete(TempFileLocation);
+            }
             WeakReferenceMessenger.Default.Send(Id, "ReceiveFinish");
         }
     }

@@ -2,10 +2,9 @@
 
 namespace FileTransfer.Common.Dtos.Transfer
 {
-    public class ApplyFileTransferAck : Message
+    //取消发送，不需要等待回复
+    public class CancelTransfer : Message
     {
         public string FileSendId { get; set; }
-        public bool Approve { get; set; }
-        public string Message { get; set; }
     }
 }

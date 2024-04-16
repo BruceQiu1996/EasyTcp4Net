@@ -16,12 +16,10 @@ using System.Windows.Media.Imaging;
 
 namespace FileTransfer.ViewModels
 {
-    public class FileSendViewModel : ObservableObject
+    public class FileSendViewModel : ObservableObject, IAsyncDisposable
     {
         public string Id { get; set; }
         public string RemoteId { get; set; }
-        public string TransferToken { get; private set; }
-        public string SessionToken { get; set; }
         public string FileName { get; set; }
         public string FileLocation { get; set; }
         public string Code { get; set; }
@@ -29,7 +27,11 @@ namespace FileTransfer.ViewModels
         public FileSendStatus Status
         {
             get => _status;
-            set => SetProperty(ref _status, value);
+            set
+            {
+                SetProperty(ref _status, value);
+                Pausing = Status == FileSendStatus.Pausing;
+            }
         }
         public BitmapImage Icon => App.ServiceProvider!.GetRequiredService<FileHelper>().GetIconByFileExtension(FileName).Item2;
         public long Size { get; set; } //发送文件的大小
@@ -64,11 +66,13 @@ namespace FileTransfer.ViewModels
 
         public RelayCommand PauseCommand { get; set; }
         public RelayCommand ContinueCommand { get; set; }
+        public AsyncRelayCommand CancelCommandAsync { get; set; }
         public FileSendViewModel(RemoteChannelModel remoteChannelModel)
         {
             _easyTcpClient = new EasyTcpClient(remoteChannelModel.IPAddress, remoteChannelModel.Port, new EasyTcpClientOptions()
             {
-                ConnectRetryTimes = 3
+                ConnectRetryTimes = 3,
+                BufferSize = 4 * 1024 * 100
             });
             _easyTcpClient.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
             _easyTcpClient.OnDisConnected += (obj, e) =>
@@ -81,6 +85,7 @@ namespace FileTransfer.ViewModels
             };
             PauseCommand = new RelayCommand(Pause);
             ContinueCommand = new RelayCommand(Continue);
+            CancelCommandAsync = new AsyncRelayCommand(CancelAsync);
         }
 
         /// <summary>
@@ -117,7 +122,6 @@ namespace FileTransfer.ViewModels
             if (Pausing)
                 return;
             _resetEvent.Reset();
-            Pausing = true;
             Status = FileSendStatus.Pausing;
         }
 
@@ -126,8 +130,14 @@ namespace FileTransfer.ViewModels
             if (!Pausing)
                 return;
             _resetEvent.Set();
-            Pausing = false;
             Status = FileSendStatus.Transfering;
+        }
+
+        private async Task CancelAsync()
+        {
+            _resetEvent.Set();
+            _cancellationTokenSource?.Cancel();
+            await CancelCompletedAsync();
         }
 
         /// <summary>
@@ -147,13 +157,14 @@ namespace FileTransfer.ViewModels
 
             int bufferSize = 1024 * 400;
             int segement = 1; //总共的段数
+            int segementIndex = 1;
             var fileHelper = App.ServiceProvider.GetRequiredService<FileHelper>();
             long needTransfer = fileInfo.Length - TransferBytes;
             await Task.Run(async () =>
             {
                 using (var fileStream = File.OpenRead(FileLocation))
                 {
-                    byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+                    byte[] buffer = new byte[bufferSize];
                     //分段
                     if (needTransfer > buffer.Length)
                     {
@@ -167,13 +178,11 @@ namespace FileTransfer.ViewModels
                     {
                         var totalLength = fileInfo.Length;
                         fileStream.Seek(TransferBytes, SeekOrigin.Begin);
-                        int segementIndex = 1;
                         while (TransferBytes < totalLength)
                         {
                             _resetEvent.WaitOne();
-                            if (_cancellationTokenSource.IsCancellationRequested) 
+                            if (_cancellationTokenSource.IsCancellationRequested)
                             {
-                                await CancelCompletedAsync();
                                 return;
                             }
 
@@ -186,13 +195,15 @@ namespace FileTransfer.ViewModels
                                     Data = buffer[..length],
                                     SegementIndex = segementIndex,
                                     TotalSegement = segement,
-                                    FileSendId = Id,
-                                    TransferToken = TransferToken
+                                    FileSendId = Id
                                 }
                             }.Serialize());
+                            Console.WriteLine($"发送：{Id}---{segementIndex}");
                             segementIndex++;
                             TransferBytes += length;
                         }
+
+                        await NormolCompletedAsync();
                     }
                     catch (Exception ex)
                     {
@@ -200,14 +211,8 @@ namespace FileTransfer.ViewModels
                         //结束发送并且暂停发送
 
                     }
-                    finally
-                    {
-                        ArrayPool<byte>.Shared.Return(buffer, true);
-                    }
                 }
             });
-
-            await NormolCompletedAsync();
         }
 
         /// <summary>
@@ -230,6 +235,24 @@ namespace FileTransfer.ViewModels
             var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
             //更新数据库
             await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, false, "取消发送");
+            //通知接收端
+            try
+            {
+                var _ = Task.Run(async () =>
+                {
+                    await _easyTcpClient.SendAsync(new Packet<CancelTransfer>()
+                    {
+                        MessageType = MessageType.CancelSend,
+                        Body = new CancelTransfer()
+                        {
+                            FileSendId = Id
+                        }
+                    }.Serialize());
+                });
+            }
+            catch { }
+            //dispose该任务
+            await DisposeAsync();
             WeakReferenceMessenger.Default.Send(Id, "SendFinish");
         }
 
@@ -245,13 +268,12 @@ namespace FileTransfer.ViewModels
                 case MessageType.ConnectionAck:
                     {
                         var packet = Packet<ConnectionAck>.FromBytes(data);
-                        SessionToken = packet.Body!.SessionToken;
                         Status = FileSendStatus.Pending;
 
                         await _easyTcpClient.SendAsync(new Packet<ApplyFileTransfer>()
                         {
                             MessageType = MessageType.ApplyTrasnfer,
-                            Body = new ApplyFileTransfer(FileName, Id, Size, 0, Code, SessionToken)
+                            Body = new ApplyFileTransfer(FileName, Id, Size, 0, Code)
                         }.Serialize());
                     }
                     break;
@@ -278,7 +300,6 @@ namespace FileTransfer.ViewModels
                         {
                             if (packet.Body.FileSendId == Id)
                             {
-                                TransferToken = packet.Body.Token;
                                 await SendAsync();
                                 Status = FileSendStatus.Transfering;
                             }
@@ -298,6 +319,16 @@ namespace FileTransfer.ViewModels
             {
                 await _easyTcpClient.ConnectAsync();
                 Connected = true;
+            }
+        }
+
+        private bool _disposed;
+        public async ValueTask DisposeAsync()
+        {
+            if (!_disposed)
+            {
+                await _easyTcpClient?.DisConnectAsync();
+                _disposed = true;
             }
         }
     }

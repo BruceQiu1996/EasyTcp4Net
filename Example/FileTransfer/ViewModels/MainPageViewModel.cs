@@ -195,7 +195,10 @@ namespace FileTransfer.ViewModels
                     _easyTcpServer.OnClientConnectionChanged -= OnNewClientConnectedAsync!;
                     _easyTcpServer.OnReceivedData -= OnReceiveDataAsync!;
                 }
-                _easyTcpServer = new EasyTcpServer(_settings.Port);
+                _easyTcpServer = new EasyTcpServer(_settings.Port, new EasyTcpServerOptions()
+                {
+                    BufferSize = 4 * 1024 * 100
+                });
                 _easyTcpServer.OnClientConnectionChanged += OnNewClientConnectedAsync!;
                 _easyTcpServer.OnReceivedData += OnReceiveDataAsync!;
                 _easyTcpServer.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
@@ -229,21 +232,21 @@ namespace FileTransfer.ViewModels
                 return;
             }
 
-            if (e.Status == ConnectsionStatus.Connected && !_settings.AgreeConnect) //不经过允许的连接
-            {
-                await Application.Current.Dispatcher.InvokeAsync(async () =>
-                {
-                    AgreeConnectWindow agreeConnectWindow = new AgreeConnectWindow(e.ClientSession.RemoteEndPoint.ToString());
-                    agreeConnectWindow.Topmost = true;
-                    agreeConnectWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    var result = agreeConnectWindow.ShowDialog();
-                    if (result != null && !result.Value)
-                    {
-                        await _easyTcpServer.DisconnectClientAsync(e.ClientSession);
-                        return;
-                    }
-                });
-            }
+            //if (e.Status == ConnectsionStatus.Connected && !_settings.AgreeConnect) //不经过允许的连接
+            //{
+            //    await Application.Current.Dispatcher.InvokeAsync(async () =>
+            //    {
+            //        AgreeConnectWindow agreeConnectWindow = new AgreeConnectWindow(e.ClientSession.RemoteEndPoint.ToString());
+            //        agreeConnectWindow.Topmost = true;
+            //        agreeConnectWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            //        var result = agreeConnectWindow.ShowDialog();
+            //        if (result != null && !result.Value)
+            //        {
+            //            await _easyTcpServer.DisconnectClientAsync(e.ClientSession);
+            //            return;
+            //        }
+            //    });
+            //}
 
             var vm = new ClientConnectedViewModel(e.ClientSession);
             _clients.TryAdd(e.ClientSession.SessionId, vm);
@@ -251,10 +254,7 @@ namespace FileTransfer.ViewModels
             await e.ClientSession.SendAsync(new Packet<ConnectionAck>()
             {
                 MessageType = Common.Dtos.Messages.MessageType.ConnectionAck,
-                Body = new ConnectionAck()
-                {
-                    SessionToken = vm.SessionToken
-                }
+                Body = new ConnectionAck() { }
             }.Serialize());
         }
 

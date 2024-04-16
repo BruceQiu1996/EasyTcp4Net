@@ -70,6 +70,7 @@
                                                     </ContextMenu.Resources>
                                                     <MenuItem Header="暂停" Command="{Binding PauseCommand}"></MenuItem>
                                                     <MenuItem Header="继续" Command="{Binding ContinueCommand}"></MenuItem>
+                                                    <MenuItem Header="取消发送" Command="{Binding CancelCommandAsync}"></MenuItem>
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                             <Grid>

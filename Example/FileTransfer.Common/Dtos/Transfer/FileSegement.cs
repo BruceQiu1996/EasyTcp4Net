@@ -10,7 +10,6 @@ namespace FileTransfer.Common.Dtos.Transfer
         public int TotalSegement { get; set; }
         public int SegementIndex { get; set; }
         public string FileSendId { get; set; }
-        public string TransferToken { get; set; }
         public ReadOnlyMemory<byte> Data { get; set; }
     }
 }

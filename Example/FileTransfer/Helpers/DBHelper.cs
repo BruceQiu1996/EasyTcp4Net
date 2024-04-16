@@ -125,41 +125,6 @@ namespace FileTransfer.Helpers
         }
 
         /// <summary>
-        /// 发送任务暂停
-        /// </summary>
-        /// <param name="id">任务发送编号</param>
-        /// <param name="remoteId">远端连接编号</param>
-        /// <param name="result">结果</param>
-        /// <param name="message">信息</param>
-        /// <returns></returns>
-        public async Task<bool> UpdateFileSendRecordPauseAsync(string id, long transferedBytes)
-        {
-            try
-            {
-                _semaphore.WaitOne(_timeout);
-                var record =
-                    await _fileTransferDbContext.FileSendRecords.FirstOrDefaultAsync(x => x.Id == id);
-                if (record != null)
-                {
-                    record.Status = FileSendStatus.Pausing;
-                    record.TransferedSize = transferedBytes;
-                    _fileTransferDbContext.Update(record);
-                    await _fileTransferDbContext.SaveChangesAsync();
-                }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        /// <summary>
         /// 接收文件完成
         /// </summary>
         /// <param name="id">任务发送编号</param>

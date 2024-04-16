@@ -19,17 +19,13 @@ namespace FileTransfer.ViewModels
     public class ClientConnectedViewModel : ObservableObject
     {
         public ClientSession Session { get; set; }
-        public string SessionToken { get; private set; } = Guid.NewGuid().ToString();
         public DateTime? LastConnectedTime { get; set; }
         public string RemoteEndPoint => Session.RemoteEndPoint.ToString();
+
+        private FileReceiveViewModel _fileReceiveViewModel;
         public ClientConnectedViewModel(ClientSession clientSession)
         {
             Session = clientSession;
-        }
-
-        public void RefreshToken()
-        {
-            SessionToken = Guid.NewGuid().ToString();
         }
 
         /// <summary>
@@ -81,23 +77,7 @@ namespace FileTransfer.ViewModels
                             return;
                         }
 
-                        if (packet.Body!.SessionToken != SessionToken)
-                        {
-                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
-                            {
-                                MessageType = MessageType.ApplyTrasnferAck,
-                                Body = new ApplyFileTransferAck()
-                                {
-                                    Approve = false,
-                                    FileSendId = packet.Body.FileSendId,
-                                    Message = "会话密钥错误"
-                                }
-                            }.Serialize());
-
-                            return;
-                        }
-
-                        if (packet.Body.StartIndex == 0 && string.IsNullOrEmpty(packet.Body.TransferToken)) //新发送的文件TODO 根据fileSendid，sha256判断是新的传输还是断点续传,以及是否允许断点续传
+                        if (packet.Body.StartIndex == 0) //新发送的文件TODO 根据fileSendid，sha256判断是新的传输还是断点续传,以及是否允许断点续传
                         {
                             var allow =
                                 App.ServiceProvider!.GetRequiredService<IniSettings>().AgreeTransfer;
@@ -143,8 +123,8 @@ namespace FileTransfer.ViewModels
                                 packet.Body.FileSendId, RemoteEndPoint);
                             await App.ServiceProvider.GetRequiredService<DBHelper>().AddFileReceiveRecordAsync(task);
                             var transferToken = Guid.NewGuid().ToString();
-                            var fileReceiveViewModel = FileReceiveViewModel.FromModel(task); //通过数据库接收文件模型创建接收文件视图模型
-                            WeakReferenceMessenger.Default.Send(fileReceiveViewModel, "AddReceiveFileRecord");
+                            _fileReceiveViewModel = new FileReceiveViewModel(task); //通过数据库接收文件模型创建接收文件视图模型
+                            WeakReferenceMessenger.Default.Send(_fileReceiveViewModel, "AddReceiveFileRecord");
                             await Session.SendAsync(new Packet<ApplyFileTransferAck>()
                             {
                                 MessageType = MessageType.ApplyTrasnferAck,
@@ -152,7 +132,6 @@ namespace FileTransfer.ViewModels
                                 {
                                     Approve = true,
                                     FileSendId = packet.Body.FileSendId,
-                                    Token = fileReceiveViewModel.TransferToken
                                 }
                             }.Serialize());
                         }
@@ -161,7 +140,14 @@ namespace FileTransfer.ViewModels
                 case MessageType.FileSend:
                     {
                         var packet = Packet<FileSegement>.FromBytes(data);
-                        WeakReferenceMessenger.Default.Send(packet.Body!, "ReceiveFileData");
+                        await _fileReceiveViewModel?.ReceiveDataAsync(packet.Body);
+                    }
+                    break;
+                case MessageType.CancelSend:
+                    {
+                        var packet = Packet<CancelTransfer>.FromBytes(data);
+                        await _fileReceiveViewModel?.PassiveCancelAsync(packet.Body);
+                        await Session.DisposeAsync();
                     }
                     break;
             }

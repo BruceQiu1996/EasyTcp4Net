@@ -21,8 +21,8 @@ namespace EasyTcp4Net
         private Socket _socket;  //客户端本地套接字
         private readonly EasyTcpClientOptions _options = new();//客户端总配置
         private readonly X509Certificate2 _certificate;//ssl证书对象
-        private readonly SemaphoreSlim _connectLock = new SemaphoreSlim(1, 1); //开启连接的信号量
-        private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1); //发送数据的信号量
+        private readonly SemaphoreSlim _connectLock = new SemaphoreSlim(1); //开启连接的信号量
+        private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1); //发送数据的信号量
         private CancellationTokenSource _lifecycleTokenSource; //整个客户端存活的token
         private CancellationTokenSource _receiveDataTokenSource;//客户端获取数据的token
         public IPEndPoint RemoteEndPoint { get; private set; } //服务端的终结点
@@ -370,7 +370,6 @@ namespace EasyTcp4Net
                     {
                         await _networkStream.WriteAsync(needSendData, _lifecycleTokenSource.Token);
                     }
-
                     index += needSendData.Length;
                     bytesRemaining -= needSendData.Length;
                 }
