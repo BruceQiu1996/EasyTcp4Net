@@ -50,6 +50,8 @@ namespace FileTransfer.ViewModels.Transfer
                        if (viewModel != null)
                        {
                            RemoveRecordViewModel(viewModel);
+                           //增加到完成界面
+                           WeakReferenceMessenger.Default.Send(new Tuple<string, string>("receive", y), "AddToCompletePage");
                        }
                    });
                });

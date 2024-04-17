@@ -13,8 +13,10 @@ namespace FileTransfer.ViewModels
         public string SizeText => App.ServiceProvider!.GetRequiredService<FileHelper>().ToSizeText(Size);
         public BitmapImage Icon => App.ServiceProvider!.GetRequiredService<FileHelper>().GetIconByFileExtension(FileName).Item2;
         public DateTime FinishTime { get; set; }
+        public string FinishTimeText => FinishTime.ToString("yyyy-MM-dd HH:mm:ss");
         public string Direction { get; set; }
         public string Message { get; set; }
+        public bool Success { get; set; }
 
         public static FileTransferCompletedViewModel FromSendRecord(FileSendRecordModel fileSendRecordModel)
         {
@@ -24,7 +26,8 @@ namespace FileTransfer.ViewModels
                 Size = fileSendRecordModel.TotalSize,
                 FinishTime = fileSendRecordModel.FinishTime == null ? DateTime.MaxValue : fileSendRecordModel.FinishTime.Value,
                 Direction = "发送",
-                Message = fileSendRecordModel.Status == FileSendStatus.Completed ? "已完成" : fileSendRecordModel.Message
+                Message = fileSendRecordModel.Status == FileSendStatus.Completed ? "已完成" : fileSendRecordModel.Message,
+                Success = fileSendRecordModel.Status == FileSendStatus.Completed
             };
         }
 
@@ -36,7 +39,8 @@ namespace FileTransfer.ViewModels
                 Size = fileReceiveRecordModel.TotalSize,
                 FinishTime = fileReceiveRecordModel.FinishTime == null ? DateTime.MaxValue : fileReceiveRecordModel.FinishTime.Value,
                 Direction = "接收",
-                Message = fileReceiveRecordModel.Status == FileReceiveStatus.Completed ? "已完成" : fileReceiveRecordModel.Message
+                Message = fileReceiveRecordModel.Status == FileReceiveStatus.Completed ? "已完成" : fileReceiveRecordModel.Message,
+                Success = fileReceiveRecordModel.Status == FileReceiveStatus.Completed
             };
         }
     }

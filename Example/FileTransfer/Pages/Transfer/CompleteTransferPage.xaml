@@ -73,6 +73,7 @@
                                                         <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="5 0 0 0">
                                                             <TextBlock Text="{Binding FileName}" 
                                                                        FontSize="11"
+                                                                       ToolTip="{Binding FileName}"
                                                                        VerticalAlignment="Center" Margin="2 0 0 0"></TextBlock>
                                                             <TextBlock Text="{Binding SizeText}" 
                                                                    FontSize="10"
@@ -83,9 +84,9 @@
 
                                                 <TextBlock Text="{Binding Direction}" 
                                                            VerticalAlignment="Center"
-                                                           Foreground="#555"
-                                                           Grid.Column="1"></TextBlock>
-                                                <TextBlock Text="{Binding FinishTime}" Grid.Column="2"
+                                                           Grid.Column="1">
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding FinishTimeText}" Grid.Column="2"
                                                            VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"
                                                             Foreground="#555"
@@ -93,8 +94,20 @@
                                                 <TextBlock Text="{Binding Message}" Grid.Column="3"
                                                             VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"
-                                                            Foreground="#555"
-                                                           ></TextBlock>
+                                                           >
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Success}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#555"></Setter>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Success}" Value="False">
+                                                                    <Setter Property="Foreground" Value="Red"></Setter>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </Grid>
                                         </Border>
                                     </ControlTemplate>

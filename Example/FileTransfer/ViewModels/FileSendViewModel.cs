@@ -75,9 +75,11 @@ namespace FileTransfer.ViewModels
                 MaxPipeBufferSize = int.MaxValue
             });
             _easyTcpClient.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
-            _easyTcpClient.OnDisConnected += (obj, e) =>
+            _easyTcpClient.OnDisConnected += async (obj, e) =>
             {
                 Connected = false;
+                _cancellationTokenSource.Cancel();
+                await ErrorCompletedAsync();
             };
             _easyTcpClient.OnReceivedData += async (obj, e) =>
             {
@@ -208,7 +210,8 @@ namespace FileTransfer.ViewModels
                     {
                         //TODO异常结束发送
                         //结束发送并且暂停发送
-
+                        await ErrorCompletedAsync();
+                        //TODO log
                     }
                 }
             });
@@ -219,6 +222,10 @@ namespace FileTransfer.ViewModels
         /// </summary>
         public async Task NormolCompletedAsync()
         {
+            if (Status == FileSendStatus.Completed || Status == FileSendStatus.Faild)
+                return;
+
+            Status = FileSendStatus.Completed;
             var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
             //更新数据库
             await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, true);
@@ -231,6 +238,10 @@ namespace FileTransfer.ViewModels
         /// <returns></returns>
         public async Task CancelCompletedAsync()
         {
+            if (Status == FileSendStatus.Completed || Status == FileSendStatus.Faild)
+                return;
+
+            Status = FileSendStatus.Faild;
             var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
             //更新数据库
             await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, false, "取消发送");
@@ -250,6 +261,24 @@ namespace FileTransfer.ViewModels
                 });
             }
             catch { }
+            //dispose该任务
+            await DisposeAsync();
+            WeakReferenceMessenger.Default.Send(Id, "SendFinish");
+        }
+
+        /// <summary>
+        /// 取消导致任务结束
+        /// </summary>
+        /// <returns></returns>
+        public async Task ErrorCompletedAsync()
+        {
+            if (Status == FileSendStatus.Completed || Status == FileSendStatus.Faild)
+                return;
+
+            Status = FileSendStatus.Faild;
+            var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
+            //更新数据库
+            await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, false, "发送异常结束");
             //dispose该任务
             await DisposeAsync();
             WeakReferenceMessenger.Default.Send(Id, "SendFinish");
@@ -314,10 +343,17 @@ namespace FileTransfer.ViewModels
         /// <returns></returns>
         public async Task StartSendFileAsync()
         {
-            if (!Connected)
+            try
             {
-                await _easyTcpClient.ConnectAsync();
-                Connected = true;
+                if (!Connected)
+                {
+                    await _easyTcpClient.ConnectAsync();
+                    Connected = true;
+                }
+            }
+            catch (Exception ex) 
+            {
+                await ErrorCompletedAsync();
             }
         }
 

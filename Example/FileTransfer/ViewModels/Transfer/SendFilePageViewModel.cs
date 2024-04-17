@@ -1,11 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using EasyTcp4Net;
 using FileTransfer.Helpers;
-using FileTransfer.Models;
-using FileTransfer.Resources;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -44,6 +40,8 @@ namespace FileTransfer.ViewModels.Transfer
                         if (viewModel != null)
                         {
                             RemoveRecordViewModel(viewModel);
+                            //增加到完成界面
+                            WeakReferenceMessenger.Default.Send(new Tuple<string, string>("send", y), "AddToCompletePage");
                         }
                     });
                 });
