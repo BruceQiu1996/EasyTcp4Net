@@ -12,6 +12,13 @@ namespace FileTransfer.ViewModels.Transfer
         public ObservableCollection<FileSendViewModel> FileSendViewModels { get; set; }
         public AsyncRelayCommand LoadCommandAsync { get; set; }
 
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set => SetProperty(ref _hasData, value);
+        }
+
         private readonly DBHelper _dBHelper;
         public SendFilePageViewModel(DBHelper dBHelper)
         {
@@ -74,13 +81,14 @@ namespace FileTransfer.ViewModels.Transfer
             {
                 FileSendViewModels.Insert(insertIndex, fileSendViewModel);
             }
-
+            HasData = FileSendViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
         }
 
         public void RemoveRecordViewModel(FileSendViewModel fileSendViewModel)
         {
             FileSendViewModels.Remove(fileSendViewModel);
+            HasData = FileSendViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
         }
     }

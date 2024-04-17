@@ -34,9 +34,16 @@ namespace FileTransfer.ViewModels.Transfer
                    }
                    Application.Current.Dispatcher.Invoke(() =>
                    {
-                       FileTransferCompletedViewModels.Insert(0, fileTransferCompletedViewModel);
+                       AddRecordViewModel(fileTransferCompletedViewModel, 0);
                    });
                });
+        }
+
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set => SetProperty(ref _hasData, value);
         }
 
         private bool _loaded = false;
@@ -45,7 +52,6 @@ namespace FileTransfer.ViewModels.Transfer
         private async Task LoadAsync()
         {
             if (_loaded) return;
-            FileTransferCompletedViewModels.Clear();
             var receivedRecords = await _dbHelper.WhereAsync<FileReceiveRecordModel>(x =>
                 x.Status == FileReceiveStatus.Faild || x.Status == FileReceiveStatus.Completed);
 
@@ -64,10 +70,27 @@ namespace FileTransfer.ViewModels.Transfer
 
             foreach (var item in list.OrderByDescending(x => x.FinishTime))
             {
-                FileTransferCompletedViewModels.Add(item);
+                AddRecordViewModel(item);
             };
 
             _loaded = true;
+        }
+
+        public void AddRecordViewModel(FileTransferCompletedViewModel fileReceiveViewModel, int insertIndex = -1)
+        {
+            if (insertIndex == -1)
+                FileTransferCompletedViewModels.Add(fileReceiveViewModel);
+            else if (insertIndex >= 0)
+            {
+                FileTransferCompletedViewModels.Insert(insertIndex, fileReceiveViewModel);
+            }
+            HasData = FileTransferCompletedViewModels.Count > 0;
+        }
+
+        public void RemoveRecordViewModel(FileTransferCompletedViewModel fileReceiveViewModel)
+        {
+            FileTransferCompletedViewModels.Remove(fileReceiveViewModel);
+            HasData = FileTransferCompletedViewModels.Count > 0;
         }
     }
 }

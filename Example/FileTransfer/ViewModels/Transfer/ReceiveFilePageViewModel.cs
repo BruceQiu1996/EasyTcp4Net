@@ -1,11 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
-using FileTransfer.Resources;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -18,6 +15,13 @@ namespace FileTransfer.ViewModels.Transfer
         {
             get => fileReceiveViewModels;
             set => SetProperty(ref fileReceiveViewModels, value);
+        }
+
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set => SetProperty(ref _hasData, value);
         }
 
         public AsyncRelayCommand LoadCommandAsync { get; set; }
@@ -84,14 +88,14 @@ namespace FileTransfer.ViewModels.Transfer
             {
                 FileReceiveViewModels.Insert(insertIndex, fileReceiveViewModel);
             }
-
+            HasData = FileReceiveViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
         }
 
         public void RemoveRecordViewModel(FileReceiveViewModel fileReceiveViewModel)
         {
             FileReceiveViewModels.Remove(fileReceiveViewModel);
-
+            HasData = FileReceiveViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
         }
     }

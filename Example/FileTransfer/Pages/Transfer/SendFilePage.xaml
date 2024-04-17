@@ -14,7 +14,8 @@
         </behaviors:EventTrigger>
     </behaviors:Interaction.Triggers>
     <Grid>
-        <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1">
+        <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1"
+                      Visibility="{Binding HasData,Converter={StaticResource Boolean2VisibilityConverter}}">
             <Grid>
                 <ListBox ScrollViewer.CanContentScroll="False"
                          Padding="0"
@@ -149,5 +150,12 @@
                 </ListBox>
             </Grid>
         </ScrollViewer>
+        <StackPanel Orientation="Vertical" 
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding HasData,Converter={StaticResource Boolean2VisibilityReConverter}}">
+            <Path Data="{StaticResource empty}" Fill="#999"
+                  Stretch="Uniform" Height="70"></Path>
+            <TextBlock Text="暂无数据" FontSize="22" Margin="10" Foreground="#999"></TextBlock>
+        </StackPanel>
     </Grid>
 </Page>
