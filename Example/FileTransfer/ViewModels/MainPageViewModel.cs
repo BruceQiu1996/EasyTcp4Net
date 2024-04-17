@@ -73,17 +73,15 @@ namespace FileTransfer.ViewModels
         private readonly ConcurrentDictionary<string, ClientConnectedViewModel> _clients = new ConcurrentDictionary<string, ClientConnectedViewModel>();
         private readonly IniSettings _settings;
         private readonly NetHelper _netHelper;
-        private readonly FileTransferDbContext _fileTransferDbContext;
         private readonly DBHelper _dBHelper;
         private readonly GrowlHelper _grolHelper;
         private EasyTcpServer _easyTcpServer;
-        public MainPageViewModel(IniSettings iniSettings, NetHelper netHelper, FileTransferDbContext fileTransferDbContext,
+        public MainPageViewModel(IniSettings iniSettings, NetHelper netHelper,
             DBHelper dBHelper, GrowlHelper grolHelper)
         {
             _settings = iniSettings;
             _netHelper = netHelper;
             _dBHelper = dBHelper;
-            _fileTransferDbContext = fileTransferDbContext;
             WeakReferenceMessenger.Default.Register<MainPageViewModel,
                 Tuple<string, string, ushort>, string>(this, "AddRemoteChannel", async (x, y) =>
             {
@@ -127,7 +125,7 @@ namespace FileTransfer.ViewModels
                 await _settings.WritePortAsync(ushort.Parse(Port));
             }
 
-            var remoteChannels = await _fileTransferDbContext.RemoteChannels.ToListAsync();
+            var remoteChannels = await _dBHelper.GetAllAsync<RemoteChannelModel>();
             foreach (var item in remoteChannels.OrderByDescending(x => x.CreateTime))
             {
                 RemoteChannelViewModels.Add(RemoteChannelViewModel.FromModel(item));
@@ -154,6 +152,9 @@ namespace FileTransfer.ViewModels
             //加载发送和接收页
             WeakReferenceMessenger.Default.Send(string.Empty, "Load");
             _loaded = true;
+
+            ///自动监听
+            await StartListeningAsync();
         }
 
         /// <summary>
@@ -303,8 +304,8 @@ namespace FileTransfer.ViewModels
                 return;
             }
 
-            var channel = _fileTransferDbContext.RemoteChannels
-                .FirstOrDefault(x => x.IPAddress == ip && x.Port == port);
+            var channel = _dBHelper
+                .FirstOrDefaultAsync<RemoteChannelModel>(x => x.IPAddress == ip && x.Port == port);
             if (channel != null)
             {
                 HandyControl.Controls.MessageBox.Show("远程连接已存在", "错误", MessageBoxButton.OK, MessageBoxImage.Error);

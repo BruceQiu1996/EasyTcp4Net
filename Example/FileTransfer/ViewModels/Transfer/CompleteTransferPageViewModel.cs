@@ -1,8 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileTransfer.Helpers;
 using FileTransfer.Models;
-using FileTransfer.Resources;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 
 namespace FileTransfer.ViewModels.Transfer
@@ -11,11 +10,11 @@ namespace FileTransfer.ViewModels.Transfer
     {
         public ObservableCollection<FileTransferCompletedViewModel> FileTransferCompletedViewModels { get; set; }
 
-        private readonly FileTransferDbContext _fileTransferDbContext;
-        public CompleteTransferPageViewModel(FileTransferDbContext fileTransferDbContext)
+        private readonly DBHelper _dbHelper;
+        public CompleteTransferPageViewModel(DBHelper dbHelper)
         {
             FileTransferCompletedViewModels = new ObservableCollection<FileTransferCompletedViewModel>();
-            _fileTransferDbContext = fileTransferDbContext;
+            _dbHelper = dbHelper;
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
         }
 
@@ -26,14 +25,14 @@ namespace FileTransfer.ViewModels.Transfer
         {
             if (_loaded) return;
             FileTransferCompletedViewModels.Clear();
-            var receivedRecords = await _fileTransferDbContext.FileReceiveRecords.Where(x =>
-                x.Status == FileReceiveStatus.Faild || x.Status == FileReceiveStatus.Completed).ToListAsync();
+            var receivedRecords = await _dbHelper.WhereAsync<FileReceiveRecordModel>(x =>
+                x.Status == FileReceiveStatus.Faild || x.Status == FileReceiveStatus.Completed);
 
-            var sendRecords = await _fileTransferDbContext.FileSendRecords.Where(x =>
-               x.Status == FileSendStatus.Faild || x.Status == FileSendStatus.Completed).ToListAsync();
+            var sendRecords = await _dbHelper.WhereAsync<FileSendRecordModel>(x =>
+               x.Status == FileSendStatus.Faild || x.Status == FileSendStatus.Completed);
 
             var list = new List<FileTransferCompletedViewModel>();
-            foreach (var record in receivedRecords) 
+            foreach (var record in receivedRecords)
             {
                 list.Add(FileTransferCompletedViewModel.FromReceiveRecord(record));
             }

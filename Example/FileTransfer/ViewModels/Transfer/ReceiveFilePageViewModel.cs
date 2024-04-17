@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using FileTransfer.Common.Dtos.Transfer;
+using FileTransfer.Helpers;
 using FileTransfer.Models;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
@@ -21,8 +22,8 @@ namespace FileTransfer.ViewModels.Transfer
 
         public AsyncRelayCommand LoadCommandAsync { get; set; }
 
-        private readonly FileTransferDbContext _fileTransferDbContext;
-        public ReceiveFilePageViewModel(FileTransferDbContext fileTransferDbContext)
+        private readonly DBHelper _dBHelper;
+        public ReceiveFilePageViewModel(DBHelper dBHelper)
         {
             //从channel发过来的发送任务
             WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
@@ -54,7 +55,7 @@ namespace FileTransfer.ViewModels.Transfer
                });
 
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
-            _fileTransferDbContext = fileTransferDbContext;
+            _dBHelper = dBHelper;
         }
 
         private bool _loaded = false;
@@ -62,8 +63,8 @@ namespace FileTransfer.ViewModels.Transfer
         {
             if (_loaded) return;
             FileReceiveViewModels.Clear();
-            var records = await _fileTransferDbContext.FileReceiveRecords.Where(x =>
-            x.Status != FileReceiveStatus.Faild && x.Status != FileReceiveStatus.Completed).ToListAsync();
+            var records = await _dBHelper.WhereAsync<FileReceiveRecordModel>(x =>
+            x.Status != FileReceiveStatus.Faild && x.Status != FileReceiveStatus.Completed);
 
             records.ForEach(x =>
             {

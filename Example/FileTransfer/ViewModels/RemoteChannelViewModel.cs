@@ -101,9 +101,8 @@ namespace FileTransfer.ViewModels
                     throw new Exception("写入到数据库错误");
 
                 //发送到界面
-                var channel = await App.ServiceProvider!.GetRequiredService<FileTransferDbContext>()
-                    .RemoteChannels.FirstOrDefaultAsync(x => x.Id == Id);
-
+                var channel = await App.ServiceProvider!
+                    .GetRequiredService<DBHelper>().FindAsync<RemoteChannelModel>(Id);
                 //根据channel和发送记录生成发送任务viewmodel
                 var fileSendViewModel = new FileSendViewModel(record, channel);
                 WeakReferenceMessenger.Default.Send(fileSendViewModel, "AddSendFileRecord");

@@ -1,6 +1,7 @@
 ﻿using FileTransfer.Models;
 using FileTransfer.Resources;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace FileTransfer.Helpers
 {
@@ -10,7 +11,7 @@ namespace FileTransfer.Helpers
     public class DBHelper
     {
         private readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
-        private readonly Semaphore _semaphore = new Semaphore(1, 1); //sqlite需要单线程操作写
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1); //sqlite需要单线程操作写
         private readonly FileTransferDbContext _fileTransferDbContext;
         public DBHelper(FileTransferDbContext fileTransferDbContext)
         {
@@ -26,7 +27,7 @@ namespace FileTransfer.Helpers
         {
             try
             {
-                _semaphore.WaitOne(_timeout);
+                _semaphore.Wait(_timeout);
                 await _fileTransferDbContext.RemoteChannels.AddAsync(channelModel);
                 await _fileTransferDbContext.SaveChangesAsync();
 
@@ -51,7 +52,7 @@ namespace FileTransfer.Helpers
         {
             try
             {
-                _semaphore.WaitOne(_timeout);
+                _semaphore.Wait(_timeout);
                 await _fileTransferDbContext.FileSendRecords.AddAsync(fileSendRecord);
                 await _fileTransferDbContext.SaveChangesAsync();
 
@@ -71,7 +72,7 @@ namespace FileTransfer.Helpers
         {
             try
             {
-                _semaphore.WaitOne(_timeout);
+                _semaphore.Wait(_timeout);
                 await _fileTransferDbContext.FileReceiveRecords.AddAsync(fileReceiveRecord);
                 await _fileTransferDbContext.SaveChangesAsync();
 
@@ -99,7 +100,7 @@ namespace FileTransfer.Helpers
         {
             try
             {
-                _semaphore.WaitOne(_timeout);
+                _semaphore.Wait(_timeout);
                 var record =
                     await _fileTransferDbContext.FileSendRecords.FirstOrDefaultAsync(x => x.Id == id
                     && x.RemoteId == remoteId);
@@ -136,7 +137,7 @@ namespace FileTransfer.Helpers
         {
             try
             {
-                _semaphore.WaitOne(_timeout);
+                _semaphore.Wait(_timeout);
                 var record =
                     await _fileTransferDbContext.FileReceiveRecords.FirstOrDefaultAsync(x => x.Id == id);
 
@@ -155,6 +156,137 @@ namespace FileTransfer.Helpers
             catch
             {
                 return false;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// 按照id查询
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <param name="id"></param>
+        /// <returns>对象</returns>
+        public async Task<TModel> FindAsync<TModel>(string id) where TModel : class
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var record = await _fileTransferDbContext.FindAsync<TModel>(id);
+
+                return record;
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// 获取发送记录包含远程端信息
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<FileSendWithRemoteChannelModel>> GetSendRecordsWithRemoteChannelAsync()
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var records = await _fileTransferDbContext.FileSendRecords
+                .Join(_fileTransferDbContext.RemoteChannels, x => x.RemoteId,
+                x => x.Id, (x, y) =>
+                new FileSendWithRemoteChannelModel
+                {
+                    FileSendRecordModel = x,
+                    RemoteChannelModel = y
+                }).Where(x => x.FileSendRecordModel.Status != FileSendStatus.Completed
+                && x.FileSendRecordModel.Status != FileSendStatus.Faild).OrderByDescending(x => x.FileSendRecordModel.CreateTime).ToListAsync();
+
+                return records;
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+
+        }
+
+        /// <summary>
+        /// 获取所有的
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <returns></returns>
+        public async Task<List<TModel>> GetAllAsync<TModel>() where TModel : class
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var records = await _fileTransferDbContext.Set<TModel>().ToListAsync();
+
+                return records;
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// 筛选元素
+        /// </summary>
+        /// <typeparam name="模型类型"></typeparam>
+        /// <param name="expression">筛选条件</param>
+        /// <returns></returns>
+        public async Task<List<TModel>> WhereAsync<TModel>(Expression<Func<TModel, bool>> expression) where TModel : class
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var records = await _fileTransferDbContext.Set<TModel>().Where(expression).ToListAsync();
+
+                return records;
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        /// 筛选第一个元素
+        /// </summary>
+        /// <typeparam name="模型类型"></typeparam>
+        /// <param name="expression">筛选条件</param>
+        /// <returns></returns>
+        public async Task<TModel> FirstOrDefaultAsync<TModel>(Expression<Func<TModel, bool>> expression) where TModel : class
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var record = await _fileTransferDbContext.Set<TModel>().FirstOrDefaultAsync(expression);
+
+                return record;
+            }
+            catch
+            {
+                return null;
             }
             finally
             {
