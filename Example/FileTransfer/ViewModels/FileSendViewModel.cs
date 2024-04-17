@@ -9,7 +9,6 @@ using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
-using System.Buffers;
 using System.Buffers.Binary;
 using System.IO;
 using System.Windows.Media.Imaging;
@@ -72,7 +71,8 @@ namespace FileTransfer.ViewModels
             _easyTcpClient = new EasyTcpClient(remoteChannelModel.IPAddress, remoteChannelModel.Port, new EasyTcpClientOptions()
             {
                 ConnectRetryTimes = 3,
-                BufferSize = 4 * 1024 * 100
+                BufferSize = 1024 * 8,
+                MaxPipeBufferSize = int.MaxValue
             });
             _easyTcpClient.SetReceiveFilter(new FixedHeaderPackageFilter(16, 8, 4, false));
             _easyTcpClient.OnDisConnected += (obj, e) =>
@@ -198,7 +198,6 @@ namespace FileTransfer.ViewModels
                                     FileSendId = Id
                                 }
                             }.Serialize());
-                            Console.WriteLine($"发送：{Id}---{segementIndex}");
                             segementIndex++;
                             TransferBytes += length;
                         }

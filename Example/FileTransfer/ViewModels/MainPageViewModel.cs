@@ -197,7 +197,8 @@ namespace FileTransfer.ViewModels
                 }
                 _easyTcpServer = new EasyTcpServer(_settings.Port, new EasyTcpServerOptions()
                 {
-                    BufferSize = 4 * 1024 * 100
+                    BufferSize = 8 * 1024,
+                    MaxPipeBufferSize = int.MaxValue
                 });
                 _easyTcpServer.OnClientConnectionChanged += OnNewClientConnectedAsync!;
                 _easyTcpServer.OnReceivedData += OnReceiveDataAsync!;

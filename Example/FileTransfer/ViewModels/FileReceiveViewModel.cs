@@ -70,8 +70,6 @@ namespace FileTransfer.ViewModels
             (bool, string) result = (true, null);
             if (fileSegement.FileSendId != FileSendId)
                 return (false, "传输任务ID错误");
-
-            Console.WriteLine($"接收：{fileSegement.FileSendId}---{fileSegement.SegementIndex}");
             try
             {
                 _semaphore.Wait();

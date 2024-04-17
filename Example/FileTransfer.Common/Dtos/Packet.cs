@@ -1,6 +1,8 @@
 ﻿using FileTransfer.Common.Core;
 using FileTransfer.Common.Dtos.Messages;
+using FileTransfer.Common.Dtos.Transfer;
 using System.Buffers.Binary;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
