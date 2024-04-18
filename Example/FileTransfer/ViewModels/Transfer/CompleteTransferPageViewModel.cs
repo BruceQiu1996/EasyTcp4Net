@@ -37,6 +37,12 @@ namespace FileTransfer.ViewModels.Transfer
                        AddRecordViewModel(fileTransferCompletedViewModel, 0);
                    });
                });
+
+            WeakReferenceMessenger.Default.Register<CompleteTransferPageViewModel,
+               string, string>(this, "Load", async (x, y) =>
+               {
+                   await LoadAsync();
+               });
         }
 
         private bool _hasData;

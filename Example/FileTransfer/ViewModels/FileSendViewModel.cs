@@ -30,8 +30,20 @@ namespace FileTransfer.ViewModels
             {
                 SetProperty(ref _status, value);
                 Pausing = Status == FileSendStatus.Pausing;
+                StatusMessage = Status.GetDescription();
             }
         }
+
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                SetProperty(ref _statusMessage, value);
+            }
+        }
+
         public BitmapImage Icon => App.ServiceProvider!.GetRequiredService<FileHelper>().GetIconByFileExtension(FileName).Item2;
         public long Size { get; set; } //发送文件的大小
         private long _transferBytes;
@@ -78,8 +90,7 @@ namespace FileTransfer.ViewModels
             _easyTcpClient.OnDisConnected += async (obj, e) =>
             {
                 Connected = false;
-                _cancellationTokenSource.Cancel();
-                await ErrorCompletedAsync();
+                Pause(); //暂停
             };
             _easyTcpClient.OnReceivedData += async (obj, e) =>
             {
@@ -123,16 +134,22 @@ namespace FileTransfer.ViewModels
         {
             if (Pausing)
                 return;
+
             _resetEvent.Reset();
             Status = FileSendStatus.Pausing;
         }
 
-        private void Continue()
+        private async void Continue()
         {
             if (!Pausing)
                 return;
             _resetEvent.Set();
             Status = FileSendStatus.Transfering;
+            if (!Connected) 
+            {
+                //重新开始建立连接和发送
+                await StartSendFileAsync();
+            }
         }
 
         private async Task CancelAsync()
@@ -148,8 +165,9 @@ namespace FileTransfer.ViewModels
         /// <param name="startIndex"></param>
         /// <param name="easyTcpClient"></param>
         /// <returns></returns>
-        public async Task SendAsync()
+        public async Task SendAsync(long transfered)
         {
+            TransferBytes = transfered;
             FileInfo fileInfo = new FileInfo(FileLocation);
             if (TransferBytes >= fileInfo.Length)
             {
@@ -182,26 +200,33 @@ namespace FileTransfer.ViewModels
                         fileStream.Seek(TransferBytes, SeekOrigin.Begin);
                         while (TransferBytes < totalLength)
                         {
-                            _resetEvent.WaitOne();
-                            if (_cancellationTokenSource.IsCancellationRequested)
+                            try
                             {
-                                return;
-                            }
-
-                            var length = await fileStream.ReadAsync(buffer);
-                            await _easyTcpClient.SendAsync(new Packet<FileSegement>()
-                            {
-                                MessageType = MessageType.FileSend,
-                                Body = new FileSegement()
+                                _resetEvent.WaitOne();
+                                if (_cancellationTokenSource.IsCancellationRequested)
                                 {
-                                    Data = buffer[..length],
-                                    SegementIndex = segementIndex,
-                                    TotalSegement = segement,
-                                    FileSendId = Id
+                                    return;
                                 }
-                            }.Serialize());
-                            segementIndex++;
-                            TransferBytes += length;
+
+                                var length = await fileStream.ReadAsync(buffer);
+                                await _easyTcpClient.SendAsync(new Packet<FileSegement>()
+                                {
+                                    MessageType = MessageType.FileSend,
+                                    Body = new FileSegement()
+                                    {
+                                        Data = buffer[..length],
+                                        SegementIndex = segementIndex,
+                                        TotalSegement = segement,
+                                        FileSendId = Id
+                                    }
+                                }.Serialize());
+                                segementIndex++;
+                                TransferBytes += length;
+                            }
+                            catch (Exception ex) 
+                            {
+                                Pause();
+                            }
                         }
 
                         await NormolCompletedAsync();
@@ -210,7 +235,7 @@ namespace FileTransfer.ViewModels
                     {
                         //TODO异常结束发送
                         //结束发送并且暂停发送
-                        await ErrorCompletedAsync();
+                        await ErrorCompletedAsync("发送异常结束");
                         //TODO log
                     }
                 }
@@ -261,8 +286,6 @@ namespace FileTransfer.ViewModels
                 });
             }
             catch { }
-            //dispose该任务
-            await DisposeAsync();
             WeakReferenceMessenger.Default.Send(Id, "SendFinish");
         }
 
@@ -270,7 +293,7 @@ namespace FileTransfer.ViewModels
         /// 取消导致任务结束
         /// </summary>
         /// <returns></returns>
-        public async Task ErrorCompletedAsync()
+        public async Task ErrorCompletedAsync(string message)
         {
             if (Status == FileSendStatus.Completed || Status == FileSendStatus.Faild)
                 return;
@@ -278,7 +301,7 @@ namespace FileTransfer.ViewModels
             Status = FileSendStatus.Faild;
             var dbHelper = App.ServiceProvider!.GetRequiredService<DBHelper>();
             //更新数据库
-            await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, false, "发送异常结束");
+            await dbHelper.UpdateFileSendRecordCompleteAsync(Id, RemoteId, false, message);
             //dispose该任务
             await DisposeAsync();
             WeakReferenceMessenger.Default.Send(Id, "SendFinish");
@@ -308,10 +331,9 @@ namespace FileTransfer.ViewModels
                 case MessageType.ApplyTrasnferAck:
                     {
                         var packet = Packet<ApplyFileTransferAck>.FromBytes(data);
-                        if (!packet.Body.Approve)
+                        if (packet.Body.Result == ApplyFileTransferAckResult.Rejected)
                         {
-                            App.ServiceProvider.GetRequiredService<GrowlHelper>()
-                                .WarningGlobal("发送失败:" + packet.Body.Message);
+                            App.ServiceProvider.GetRequiredService<GrowlHelper>().WarningGlobal("发送失败:" + packet.Body.Message);
 
                             var _ = Task.Run(async () =>
                             {
@@ -324,11 +346,19 @@ namespace FileTransfer.ViewModels
                             });
 
                         }
-                        else
+                        else if (packet.Body.Result == ApplyFileTransferAckResult.TaskCompleted)
+                        {
+                            await NormolCompletedAsync();
+                        }
+                        else if (packet.Body.Result == ApplyFileTransferAckResult.DataError)
+                        {
+                            await ErrorCompletedAsync("数据错误");
+                        }
+                        else if (packet.Body.Result == ApplyFileTransferAckResult.Approved)
                         {
                             if (packet.Body.FileSendId == Id)
                             {
-                                await SendAsync();
+                                await SendAsync(packet.Body.TransferedBytes);
                                 Status = FileSendStatus.Transfering;
                             }
                         }
@@ -353,7 +383,7 @@ namespace FileTransfer.ViewModels
             }
             catch (Exception ex) 
             {
-                await ErrorCompletedAsync();
+                Pause();
             }
         }
 

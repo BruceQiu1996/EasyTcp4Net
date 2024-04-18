@@ -68,7 +68,7 @@ namespace FileTransfer.ViewModels.Transfer
         private async Task LoadAsync()
         {
             if (_loaded) return;
-            FileReceiveViewModels.Clear();
+            await _dBHelper.UpdateFileReceiveRecordsUnCompleteToPauseAsync(); //更新任务为暂停中
             var records = await _dBHelper.WhereAsync<FileReceiveRecordModel>(x =>
             x.Status != FileReceiveStatus.Faild && x.Status != FileReceiveStatus.Completed);
 

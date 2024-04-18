@@ -164,6 +164,69 @@ namespace FileTransfer.Helpers
         }
 
         /// <summary>
+        /// 启动时更新未完成的接收命令为暂停
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> UpdateFileReceiveRecordsUnCompleteToPauseAsync()
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var records = await _fileTransferDbContext.FileReceiveRecords.Where(x => x.Status != FileReceiveStatus.Completed
+                    && x.Status!=FileReceiveStatus.Faild).ToListAsync();
+
+                records.ForEach(x =>
+                {
+                    x.Status = FileReceiveStatus.Pausing;
+                });
+
+                _fileTransferDbContext.UpdateRange(records);
+                await _fileTransferDbContext.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+
+        /// <summary>
+        /// 启动时更新未完成的发送命令为暂停
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> UpdateFileSendRecordsUnCompleteToPauseAsync()
+        {
+            try
+            {
+                _semaphore.Wait(_timeout);
+                var records = await _fileTransferDbContext.FileSendRecords.Where(x => x.Status != FileSendStatus.Completed
+                    && x.Status != FileSendStatus.Faild).ToListAsync();
+
+                records.ForEach(x =>
+                {
+                    x.Status = FileSendStatus.Pausing;
+                });
+
+                _fileTransferDbContext.UpdateRange(records);
+                await _fileTransferDbContext.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
         /// 按照id查询
         /// </summary>
         /// <typeparam name="TModel"></typeparam>

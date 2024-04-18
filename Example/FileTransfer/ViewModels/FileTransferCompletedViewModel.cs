@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,15 @@ namespace FileTransfer.ViewModels
         public string Direction { get; set; }
         public string Message { get; set; }
         public bool Success { get; set; }
+
+        public AsyncRelayCommand OpenFileCommand { get; set; }
+        public AsyncRelayCommand OpenFileLocationCommand { get; set; }
+
+        public FileTransferCompletedViewModel()
+        {
+            OpenFileCommand = new AsyncRelayCommand(OpenFileAsync);
+            OpenFileLocationCommand = new AsyncRelayCommand(OpenFileLocationAsync);
+        }
 
         public static FileTransferCompletedViewModel FromSendRecord(FileSendRecordModel fileSendRecordModel)
         {
@@ -42,6 +52,16 @@ namespace FileTransfer.ViewModels
                 Message = fileReceiveRecordModel.Status == FileReceiveStatus.Completed ? "已完成" : fileReceiveRecordModel.Message,
                 Success = fileReceiveRecordModel.Status == FileReceiveStatus.Completed
             };
+        }
+
+        private async Task OpenFileAsync() 
+        {
+            
+        }
+
+        private async Task OpenFileLocationAsync() 
+        {
+        
         }
     }
 }

@@ -69,8 +69,8 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </ContextMenu.Resources>
-                                                    <MenuItem Header="暂停" Command="{Binding PauseCommand}"></MenuItem>
-                                                    <MenuItem Header="继续" Command="{Binding ContinueCommand}"></MenuItem>
+                                                    <MenuItem Header="暂停" Visibility="{Binding Pausing,Converter={StaticResource Boolean2VisibilityReConverter}}" Command="{Binding PauseCommand}"></MenuItem>
+                                                    <MenuItem Header="继续" Visibility="{Binding Pausing,Converter={StaticResource Boolean2VisibilityConverter}}" Command="{Binding ContinueCommand}"></MenuItem>
                                                     <MenuItem Header="取消发送" Command="{Binding CancelCommandAsync}"></MenuItem>
                                                 </ContextMenu>
                                             </Border.ContextMenu>
@@ -102,10 +102,11 @@
                                                     <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}" Maximum="100"></ProgressBar>
                                                 </StackPanel>
 
-                                                <TextBlock Text="{Binding Status}" Grid.Column="2"
+                                                <TextBlock Text="{Binding StatusMessage}" Grid.Column="2"
                                                            HorizontalAlignment="Left"
-                                                           Foreground="#555"
+                                                           Foreground="#888"
                                                            Margin="25 1 0 0"
+                                                           Grid.RowSpan="2"
                                                            VerticalAlignment="Center"
                                                            ></TextBlock>
 
@@ -121,15 +122,6 @@
                                                            FontSize="10"
                                                            Foreground="#aaa"
                                                             Grid.Column="1"
-                                                           ></TextBlock>
-
-                                                <TextBlock Text="传输中断"
-                                                           FontSize="10"
-                                                           Grid.Row="1"
-                                                           Margin="25 0 0 0"
-                                                           Foreground="#999"
-                                                           HorizontalAlignment="Left"
-                                                            Grid.Column="2"
                                                            ></TextBlock>
                                             </Grid>
                                         </Border>

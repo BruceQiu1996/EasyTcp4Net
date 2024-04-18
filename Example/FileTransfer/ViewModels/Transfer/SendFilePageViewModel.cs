@@ -62,7 +62,7 @@ namespace FileTransfer.ViewModels.Transfer
         private async Task LoadAsync()
         {
             if (_loaded) return;
-            FileSendViewModels.Clear();
+            await _dBHelper.UpdateFileSendRecordsUnCompleteToPauseAsync();
             var records = await _dBHelper.GetSendRecordsWithRemoteChannelAsync();
 
             records.ForEach(x =>

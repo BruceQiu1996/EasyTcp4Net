@@ -69,10 +69,11 @@
                                                     <ProgressBar Value="{Binding Progress,UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
                                                 </StackPanel>
 
-                                                <TextBlock Text="{Binding Status}" Grid.Column="2"
+                                                <TextBlock Text="{Binding StatusMessage}" Grid.Column="2"
                                                            HorizontalAlignment="Left"
-                                                           Foreground="#555"
+                                                           Foreground="#888"
                                                            Margin="25 1 0 0"
+                                                           Grid.RowSpan="2"
                                                            VerticalAlignment="Center"
                                                            ></TextBlock>
 
@@ -82,15 +83,6 @@
                                                            Margin="5 0 0 0"
                                                            Foreground="#999"
                                                            Grid.Row="1"></TextBlock>
-
-                                                <TextBlock Text="传输中断"
-                                                           FontSize="10"
-                                                           Grid.Row="1"
-                                                           Margin="25 0 0 0"
-                                                           Foreground="#999"
-                                                           HorizontalAlignment="Left"
-                                                            Grid.Column="2"
-                                                           ></TextBlock>
                                             </Grid>
                                         </Border>
                                     </ControlTemplate>

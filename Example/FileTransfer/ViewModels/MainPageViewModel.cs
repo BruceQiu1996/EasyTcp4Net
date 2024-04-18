@@ -304,7 +304,7 @@ namespace FileTransfer.ViewModels
                 return;
             }
 
-            var channel = _dBHelper
+            var channel = await _dBHelper
                 .FirstOrDefaultAsync<RemoteChannelModel>(x => x.IPAddress == ip && x.Port == port);
             if (channel != null)
             {

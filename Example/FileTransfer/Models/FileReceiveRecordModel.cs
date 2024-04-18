@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace FileTransfer.Models
 {
@@ -44,8 +45,13 @@ namespace FileTransfer.Models
 
     public enum FileReceiveStatus
     {
+        [Description("传输中")]
         Transfering = 1, //传输中
+        [Description("已完成")]
         Completed = 2, //完成
+        [Description("失败")]
         Faild = 3, //传输失败
+        [Description("暂停中")]
+        Pausing = 4,
     }
 }
