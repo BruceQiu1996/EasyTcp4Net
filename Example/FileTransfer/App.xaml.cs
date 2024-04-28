@@ -57,6 +57,8 @@ namespace FileTransfer
                         options.MaxBatchSize(100);
                         options.CommandTimeout(10000);
                     });
+                    option.EnableDetailedErrors(false);
+                    option.EnableSensitiveDataLogging(false);
                 }, ServiceLifetime.Singleton);
             });
 

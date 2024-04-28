@@ -8,7 +8,5 @@
         public ConnectionAck()
         {
         }
-
-        public string SessionToken { get; set; }
     }
 }

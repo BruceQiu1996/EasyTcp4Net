@@ -1,10 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using EasyTcp4Net;
-using FileTransfer.Models;
-using FileTransfer.Resources;
-using Microsoft.EntityFrameworkCore;
+using FileTransfer.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -15,8 +12,15 @@ namespace FileTransfer.ViewModels.Transfer
         public ObservableCollection<FileSendViewModel> FileSendViewModels { get; set; }
         public AsyncRelayCommand LoadCommandAsync { get; set; }
 
-        private readonly FileTransferDbContext _fileTransferDbContext;
-        public SendFilePageViewModel(FileTransferDbContext fileTransferDbContext)
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set => SetProperty(ref _hasData, value);
+        }
+
+        private readonly DBHelper _dBHelper;
+        public SendFilePageViewModel(DBHelper dBHelper)
         {
             //从channel发过来的发送任务
             WeakReferenceMessenger.Default.Register<SendFilePageViewModel,
@@ -43,29 +47,23 @@ namespace FileTransfer.ViewModels.Transfer
                         if (viewModel != null)
                         {
                             RemoveRecordViewModel(viewModel);
+                            //增加到完成界面
+                            WeakReferenceMessenger.Default.Send(new Tuple<string, string>("send", y), "AddToCompletePage");
                         }
                     });
                 });
 
             FileSendViewModels = new ObservableCollection<FileSendViewModel>();
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
-            _fileTransferDbContext = fileTransferDbContext;
+            _dBHelper = dBHelper;
         }
 
         private bool _loaded = false;
         private async Task LoadAsync()
         {
             if (_loaded) return;
-            FileSendViewModels.Clear();
-            var records = await _fileTransferDbContext.FileSendRecords
-                .Join(_fileTransferDbContext.RemoteChannels, x => x.RemoteId,
-                x => x.Id, (x, y) =>
-                new FileSendWithRemoteChannelModel
-                {
-                    FileSendRecordModel = x,
-                    RemoteChannelModel = y
-                }).Where(x => x.FileSendRecordModel.Status != FileSendStatus.Completed
-                && x.FileSendRecordModel.Status != FileSendStatus.Faild).OrderByDescending(x => x.FileSendRecordModel.CreateTime).ToListAsync();
+            await _dBHelper.UpdateFileSendRecordsUnCompleteToPauseAsync();
+            var records = await _dBHelper.GetSendRecordsWithRemoteChannelAsync();
 
             records.ForEach(x =>
             {
@@ -83,13 +81,14 @@ namespace FileTransfer.ViewModels.Transfer
             {
                 FileSendViewModels.Insert(insertIndex, fileSendViewModel);
             }
-
+            HasData = FileSendViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
         }
 
         public void RemoveRecordViewModel(FileSendViewModel fileSendViewModel)
         {
             FileSendViewModels.Remove(fileSendViewModel);
+            HasData = FileSendViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileSendViewModels.Count), "TransferSendCount");
         }
     }

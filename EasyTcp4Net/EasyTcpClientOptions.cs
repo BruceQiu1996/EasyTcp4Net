@@ -18,9 +18,9 @@ namespace EasyTcp4Net
         /// <summary>
         /// 流数据缓冲区大小
         /// 单位：字节
-        /// 默认值：2kb
+        /// 默认值：4kb
         /// </summary>
-        private int _bufferSize = 2 * 1024;
+        private int _bufferSize = 4 * 1024;
         public int BufferSize
         {
             get => _bufferSize;
@@ -205,12 +205,12 @@ namespace EasyTcp4Net
             }
         }
 
-        private int _maxPipeBufferSize = 1024 * 1024 * 4;
+        private int _maxPipeBufferSize = int.MaxValue;
         /// <summary>
         /// 待处理数据队列最大缓存,如果有粘包断包的过滤器，要大于单个包的大小，防止卡死
         /// 用于流量控制，背压
         /// 单位：字节
-        /// 默认值 4MB
+        /// 默认值 int.MaxValue
         /// </summary>
         public int MaxPipeBufferSize
         {

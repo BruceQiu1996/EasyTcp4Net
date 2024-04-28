@@ -6,6 +6,7 @@ using FileTransfer.Common.Dtos.Messages;
 using FileTransfer.Common.Dtos.Transfer;
 using FileTransfer.Helpers;
 using FileTransfer.Models;
+using FileTransfer.ViewModels.Transfer;
 using Microsoft.Extensions.DependencyInjection;
 using System.Buffers.Binary;
 using System.IO;
@@ -19,17 +20,13 @@ namespace FileTransfer.ViewModels
     public class ClientConnectedViewModel : ObservableObject
     {
         public ClientSession Session { get; set; }
-        public string SessionToken { get; private set; } = Guid.NewGuid().ToString();
         public DateTime? LastConnectedTime { get; set; }
         public string RemoteEndPoint => Session.RemoteEndPoint.ToString();
+
+        private FileReceiveViewModel _fileReceiveViewModel;
         public ClientConnectedViewModel(ClientSession clientSession)
         {
             Session = clientSession;
-        }
-
-        public void RefreshToken()
-        {
-            SessionToken = Guid.NewGuid().ToString();
         }
 
         /// <summary>
@@ -43,7 +40,23 @@ namespace FileTransfer.ViewModels
             {
                 case MessageType.ApplyTrasnfer:
                     {
+
                         var packet = Packet<ApplyFileTransfer>.FromBytes(data);
+                        if (_fileReceiveViewModel != null)
+                        {
+                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                            {
+                                MessageType = MessageType.ApplyTrasnferAck,
+                                Body = new ApplyFileTransferAck()
+                                {
+                                    Result = ApplyFileTransferAckResult.TaskExistAndWorking,
+                                    FileSendId = packet.Body.FileSendId,
+                                    Message = "任务已存在"
+                                }
+                            }.Serialize());
+
+                            return;
+                        }
 
                         if (string.IsNullOrEmpty(packet.Body.FileName) || string.IsNullOrEmpty(packet.Body.Code)
                             || string.IsNullOrEmpty(packet.Body.FileSendId))
@@ -53,7 +66,7 @@ namespace FileTransfer.ViewModels
                                 MessageType = MessageType.ApplyTrasnferAck,
                                 Body = new ApplyFileTransferAck()
                                 {
-                                    Approve = false,
+                                    Result = ApplyFileTransferAckResult.Rejected,
                                     FileSendId = packet.Body.FileSendId,
                                     Message = "传输文件数据异常"
                                 }
@@ -64,6 +77,7 @@ namespace FileTransfer.ViewModels
 
                         var fileHelper = App.ServiceProvider.GetRequiredService<FileHelper>();
                         var iniSettings = App.ServiceProvider.GetRequiredService<IniSettings>();
+                        var dbHelper = App.ServiceProvider.GetRequiredService<DBHelper>();
                         var canSave = fileHelper.PathCanSave(iniSettings.FileSaveLocation, packet.Body.TotalSize);
                         if (!canSave)
                         {
@@ -73,7 +87,7 @@ namespace FileTransfer.ViewModels
                                 Body = new ApplyFileTransferAck()
                                 {
                                     FileSendId = packet.Body.FileSendId,
-                                    Approve = false,
+                                    Result = ApplyFileTransferAckResult.Rejected,
                                     Message = "目标机器存储空间异常"
                                 }
                             }.Serialize());
@@ -81,23 +95,10 @@ namespace FileTransfer.ViewModels
                             return;
                         }
 
-                        if (packet.Body!.SessionToken != SessionToken)
-                        {
-                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
-                            {
-                                MessageType = MessageType.ApplyTrasnferAck,
-                                Body = new ApplyFileTransferAck()
-                                {
-                                    Approve = false,
-                                    FileSendId = packet.Body.FileSendId,
-                                    Message = "会话密钥错误"
-                                }
-                            }.Serialize());
+                        var record = await dbHelper
+                            .FirstOrDefaultAsync<FileReceiveRecordModel>(x => x.FileSendId == packet.Body.FileSendId);
 
-                            return;
-                        }
-
-                        if (packet.Body.StartIndex == 0 && string.IsNullOrEmpty(packet.Body.TransferToken)) //新发送的文件TODO 根据fileSendid，sha256判断是新的传输还是断点续传,以及是否允许断点续传
+                        if (record == null) //新发送的文件TODO 
                         {
                             var allow =
                                 App.ServiceProvider!.GetRequiredService<IniSettings>().AgreeTransfer;
@@ -119,7 +120,7 @@ namespace FileTransfer.ViewModels
                                             MessageType = MessageType.ApplyTrasnferAck,
                                             Body = new ApplyFileTransferAck()
                                             {
-                                                Approve = false,
+                                                Result = ApplyFileTransferAckResult.Rejected,
                                                 FileSendId = packet.Body.FileSendId,
                                                 Message = "对方未同意"
                                             }
@@ -143,16 +144,97 @@ namespace FileTransfer.ViewModels
                                 packet.Body.FileSendId, RemoteEndPoint);
                             await App.ServiceProvider.GetRequiredService<DBHelper>().AddFileReceiveRecordAsync(task);
                             var transferToken = Guid.NewGuid().ToString();
-                            var fileReceiveViewModel = FileReceiveViewModel.FromModel(task); //通过数据库接收文件模型创建接收文件视图模型
-                            WeakReferenceMessenger.Default.Send(fileReceiveViewModel, "AddReceiveFileRecord");
+                            _fileReceiveViewModel = new FileReceiveViewModel(task); //通过数据库接收文件模型创建接收文件视图模型
+                            WeakReferenceMessenger.Default.Send(_fileReceiveViewModel, "AddReceiveFileRecord");
                             await Session.SendAsync(new Packet<ApplyFileTransferAck>()
                             {
                                 MessageType = MessageType.ApplyTrasnferAck,
                                 Body = new ApplyFileTransferAck()
                                 {
-                                    Approve = true,
+                                    Result = ApplyFileTransferAckResult.Approved,
                                     FileSendId = packet.Body.FileSendId,
-                                    Token = fileReceiveViewModel.TransferToken
+                                }
+                            }.Serialize());
+                        }
+                        else //断点续传
+                        {
+                            if (record.Status == FileReceiveStatus.Completed
+                                || record.Status == FileReceiveStatus.Faild)
+                            {
+                                await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                                {
+                                    MessageType = MessageType.ApplyTrasnferAck,
+                                    Body = new ApplyFileTransferAck()
+                                    {
+                                        FileSendId = packet.Body.FileSendId,
+                                        Result = ApplyFileTransferAckResult.TaskCompleted,
+                                        Message = "任务已完成"
+                                    }
+                                }.Serialize());
+
+                                return;
+                            }
+
+                            if (record.Status == FileReceiveStatus.Transfering)
+                            {
+                                await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                                {
+                                    MessageType = MessageType.ApplyTrasnferAck,
+                                    Body = new ApplyFileTransferAck()
+                                    {
+                                        FileSendId = packet.Body.FileSendId,
+                                        Result = ApplyFileTransferAckResult.TaskExistAndWorking,
+                                        Message = "任务正在传输中"
+                                    }
+                                }.Serialize());
+
+                                return;
+                            }
+
+                            var vm = App.ServiceProvider.GetRequiredService<ReceiveFilePageViewModel>()
+                                .FileReceiveViewModels.FirstOrDefault(x => x.FileSendId == record.FileSendId);
+                            _fileReceiveViewModel = vm;
+                            if (vm == null)
+                            {
+                                await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                                {
+                                    MessageType = MessageType.ApplyTrasnferAck,
+                                    Body = new ApplyFileTransferAck()
+                                    {
+                                        FileSendId = packet.Body.FileSendId,
+                                        Result = ApplyFileTransferAckResult.TaskCompleted,
+                                        Message = "任务已完成"
+                                    }
+                                }.Serialize());
+                                await dbHelper.UpdateFileReceiveRecordCompleteAsync(record.Id, null, true);
+                                return;
+                            }
+
+                            if (!File.Exists(record.TempFileSaveLocation))
+                            {
+                                await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                                {
+                                    MessageType = MessageType.ApplyTrasnferAck,
+                                    Body = new ApplyFileTransferAck()
+                                    {
+                                        FileSendId = packet.Body.FileSendId,
+                                        Result = ApplyFileTransferAckResult.DataError,
+                                        Message = "数据异常"
+                                    }
+                                }.Serialize());
+                                await vm.ErrorCompletedAsync("临时文件异常");
+                                return;
+                            }
+
+                            FileInfo fileInfo = new FileInfo(record.TempFileSaveLocation);
+                            await Session.SendAsync(new Packet<ApplyFileTransferAck>()
+                            {
+                                MessageType = MessageType.ApplyTrasnferAck,
+                                Body = new ApplyFileTransferAck()
+                                {
+                                    Result = ApplyFileTransferAckResult.Approved,
+                                    FileSendId = packet.Body.FileSendId,
+                                    TransferedBytes = fileInfo.Length
                                 }
                             }.Serialize());
                         }
@@ -161,7 +243,18 @@ namespace FileTransfer.ViewModels
                 case MessageType.FileSend:
                     {
                         var packet = Packet<FileSegement>.FromBytes(data);
-                        WeakReferenceMessenger.Default.Send(packet.Body!, "ReceiveFileData");
+                        var result = await _fileReceiveViewModel?.ReceiveDataAsync(packet.Body);
+                        if (result.Item1) 
+                        {
+                            await Session.DisposeAsync();
+                        }
+                    }
+                    break;
+                case MessageType.CancelSend:
+                    {
+                        var packet = Packet<CancelTransfer>.FromBytes(data);
+                        await _fileReceiveViewModel?.PassiveCancelAsync(packet.Body);
+                        await Session.DisposeAsync();
                     }
                     break;
             }

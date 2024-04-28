@@ -5,8 +5,17 @@ namespace FileTransfer.Common.Dtos.Transfer
     public class ApplyFileTransferAck : Message
     {
         public string FileSendId { get; set; }
-        public bool Approve { get; set; }
+        public ApplyFileTransferAckResult Result { get; set; }
         public string Message { get; set; }
-        public string Token { get; set; } //本次传输的Token,如果是断点续传则需要发送端携带过来，目的是方便确定文件的唯一性
+        public long TransferedBytes { get; set; } = 0;
+    }
+
+    public enum ApplyFileTransferAckResult 
+    {
+        Approved = 1,
+        Rejected = 2,
+        TaskCompleted = 3,
+        TaskExistAndWorking = 4,
+        DataError = 5,
     }
 }

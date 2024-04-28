@@ -20,7 +20,8 @@
             <RowDefinition Height="38"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
         </Grid.RowDefinitions>
-        <hc:Card Grid.Row="0" Margin="0 1" BorderThickness="0">
+        <hc:Card Grid.Row="0" Margin="0 1" BorderThickness="0"
+                 Visibility="{Binding HasData,Converter={StaticResource Boolean2VisibilityConverter}}">
             <Grid>
                 <Button Content="清除记录" Margin="5 0" 
                         Cursor="Hand"
@@ -28,7 +29,8 @@
             </Grid>
         </hc:Card>
 
-        <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1">
+        <ScrollViewer RequestBringIntoView="ScrollViewer_RequestBringIntoView" Grid.Row="1"
+                      Visibility="{Binding HasData,Converter={StaticResource Boolean2VisibilityConverter}}">
             <Grid>
                 <ListBox ScrollViewer.CanContentScroll="False"
                      Padding="0"
@@ -56,6 +58,38 @@
                                         <Border Margin="0 0 4 1" CornerRadius="2" BorderThickness="0 0 0 0.6"
                                                 Cursor="Hand"
                                                 Background="{TemplateBinding Background}" BorderBrush="#ddd">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <ContextMenu.Resources>
+                                                        <Style TargetType="MenuItem">
+                                                            <Setter Property="Padding" Value="0"></Setter>
+                                                            <Setter Property="Width" Value="100"></Setter>
+                                                            <Setter Property="Cursor" Value="Hand"></Setter>
+                                                            <Setter Property="Height" Value="28"></Setter>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="MenuItem">
+                                                                        <Border Background="{TemplateBinding Background}">
+                                                                            <TextBlock Text="{TemplateBinding Header}" HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"></TextBlock>
+                                                                        </Border>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#eee"></Setter>
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseOver" Value="False">
+                                                                    <Setter Property="Background" Value="White"></Setter>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ContextMenu.Resources>
+                                                    <MenuItem Header="打开文件"  Command="{Binding OpenFileCommand}"></MenuItem>
+                                                    <MenuItem Header="打开文件位置" Command="{Binding OpenFileLocationCommand}"></MenuItem>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"></ColumnDefinition>
@@ -73,6 +107,7 @@
                                                         <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="5 0 0 0">
                                                             <TextBlock Text="{Binding FileName}" 
                                                                        FontSize="11"
+                                                                       ToolTip="{Binding FileName}"
                                                                        VerticalAlignment="Center" Margin="2 0 0 0"></TextBlock>
                                                             <TextBlock Text="{Binding SizeText}" 
                                                                    FontSize="10"
@@ -83,9 +118,9 @@
 
                                                 <TextBlock Text="{Binding Direction}" 
                                                            VerticalAlignment="Center"
-                                                           Foreground="#555"
-                                                           Grid.Column="1"></TextBlock>
-                                                <TextBlock Text="{Binding FinishTime}" Grid.Column="2"
+                                                           Grid.Column="1">
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding FinishTimeText}" Grid.Column="2"
                                                            VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"
                                                             Foreground="#555"
@@ -93,8 +128,20 @@
                                                 <TextBlock Text="{Binding Message}" Grid.Column="3"
                                                             VerticalAlignment="Center"
                                                            HorizontalAlignment="Center"
-                                                            Foreground="#555"
-                                                           ></TextBlock>
+                                                           >
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Success}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#555"></Setter>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Success}" Value="False">
+                                                                    <Setter Property="Foreground" Value="Red"></Setter>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </Grid>
                                         </Border>
                                     </ControlTemplate>
@@ -114,5 +161,13 @@
                 </ListBox>
             </Grid>
         </ScrollViewer>
+        <StackPanel Orientation="Vertical" 
+                    Grid.RowSpan="2"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding HasData,Converter={StaticResource Boolean2VisibilityReConverter}}">
+            <Path Data="{StaticResource empty}" Fill="#999"
+          Stretch="Uniform" Height="70"></Path>
+            <TextBlock Text="暂无数据" FontSize="22" Margin="10" Foreground="#999"></TextBlock>
+        </StackPanel>
     </Grid>
 </Page>

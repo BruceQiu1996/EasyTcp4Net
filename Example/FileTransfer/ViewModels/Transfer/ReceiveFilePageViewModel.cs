@@ -1,10 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using FileTransfer.Common.Dtos.Transfer;
+using FileTransfer.Helpers;
 using FileTransfer.Models;
-using FileTransfer.Resources;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -19,10 +17,17 @@ namespace FileTransfer.ViewModels.Transfer
             set => SetProperty(ref fileReceiveViewModels, value);
         }
 
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set => SetProperty(ref _hasData, value);
+        }
+
         public AsyncRelayCommand LoadCommandAsync { get; set; }
 
-        private readonly FileTransferDbContext _fileTransferDbContext;
-        public ReceiveFilePageViewModel(FileTransferDbContext fileTransferDbContext)
+        private readonly DBHelper _dBHelper;
+        public ReceiveFilePageViewModel(DBHelper dBHelper)
         {
             //从channel发过来的发送任务
             WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
@@ -41,16 +46,6 @@ namespace FileTransfer.ViewModels.Transfer
                 });
 
             WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
-               FileSegement, string>(this, "ReceiveFileData", async (x, y) =>
-               {
-                   var viewModel = FileReceiveViewModels.FirstOrDefault(x => x.FileSendId == y.FileSendId);
-                   if (viewModel != null && viewModel.TransferToken == y.TransferToken)
-                   {
-                       await viewModel.ReceiveDataAsync(y);
-                   }
-               });
-
-            WeakReferenceMessenger.Default.Register<ReceiveFilePageViewModel,
                string, string>(this, "ReceiveFinish", async (x, y) =>
                {
                    Application.Current.Dispatcher.Invoke(() =>
@@ -59,25 +54,27 @@ namespace FileTransfer.ViewModels.Transfer
                        if (viewModel != null)
                        {
                            RemoveRecordViewModel(viewModel);
+                           //增加到完成界面
+                           WeakReferenceMessenger.Default.Send(new Tuple<string, string>("receive", y), "AddToCompletePage");
                        }
                    });
                });
 
             LoadCommandAsync = new AsyncRelayCommand(LoadAsync);
-            _fileTransferDbContext = fileTransferDbContext;
+            _dBHelper = dBHelper;
         }
 
         private bool _loaded = false;
         private async Task LoadAsync()
         {
             if (_loaded) return;
-            FileReceiveViewModels.Clear();
-            var records = await _fileTransferDbContext.FileReceiveRecords.Where(x =>
-            x.Status != FileReceiveStatus.Faild && x.Status != FileReceiveStatus.Completed).ToListAsync();
+            await _dBHelper.UpdateFileReceiveRecordsUnCompleteToPauseAsync(); //更新任务为暂停中
+            var records = await _dBHelper.WhereAsync<FileReceiveRecordModel>(x =>
+            x.Status != FileReceiveStatus.Faild && x.Status != FileReceiveStatus.Completed);
 
             records.ForEach(x =>
             {
-                AddRecordViewModel(FileReceiveViewModel.FromModel(x));
+                AddRecordViewModel(new FileReceiveViewModel(x));
             });
 
             _loaded = true;
@@ -91,14 +88,14 @@ namespace FileTransfer.ViewModels.Transfer
             {
                 FileReceiveViewModels.Insert(insertIndex, fileReceiveViewModel);
             }
-
+            HasData = FileReceiveViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
         }
 
         public void RemoveRecordViewModel(FileReceiveViewModel fileReceiveViewModel)
         {
             FileReceiveViewModels.Remove(fileReceiveViewModel);
-
+            HasData = FileReceiveViewModels.Count > 0;
             WeakReferenceMessenger.Default.Send(new Tuple<string, int>(null, FileReceiveViewModels.Count), "TransferReceiveCount");
         }
     }
