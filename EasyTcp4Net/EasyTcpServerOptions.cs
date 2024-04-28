@@ -15,13 +15,13 @@ namespace EasyTcp4Net
         /// 避免了过多的小报文的 过大TCP头所浪费的带宽
         /// </summary>
         public bool NoDelay { get; set; } = true;
-        
-        private int _bufferSize = 300;
+
         /// <summary>
         /// 流数据缓冲区大小
         /// 单位：字节
-        /// 默认值：1kb
+        /// 默认值：4kb
         /// </summary>
+        private int _bufferSize = 4 * 1024;
         public int BufferSize
         {
             get => _bufferSize;
@@ -35,7 +35,7 @@ namespace EasyTcp4Net
                 _bufferSize = value;
             }
         }
-       
+
         private int? _connectionsLimit = null;
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace EasyTcp4Net
         /// 默认值: false
         /// </summary>
         public bool IdleSessionsCheck { get; set; } = false;
-        
+
         private int _checkSessionsIdleMs { get; set; } = 300 * 1000;
         /// <summary>
         /// 空闲连接检查时间阈值
@@ -198,12 +198,12 @@ namespace EasyTcp4Net
             }
         }
 
-        private int _maxPipeBufferSize = 1024 * 1024 * 4;
+        private int _maxPipeBufferSize = int.MaxValue;
         /// <summary>
         /// 待处理数据队列最大缓存,如果有粘包断包的过滤器，要大于单个包的大小，防止卡死
         /// 用于流量控制，背压
         /// 单位：字节
-        /// 默认值 4MB
+        /// 默认值 int.MaxValue
         /// </summary>
         public int MaxPipeBufferSize
         {
