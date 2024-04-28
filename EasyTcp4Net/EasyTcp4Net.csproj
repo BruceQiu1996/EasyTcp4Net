@@ -9,6 +9,7 @@
 		<Authors>Bruce Qiu</Authors>
 		<Company>Bruce Qiu</Company>
 		<PackageVersion>1.0.0.1</PackageVersion>
+		<PackageProjectUrl>https://github.com/BruceQiu1996/EasyTcp4Net</PackageProjectUrl>
 		<Description>A high-performance TCP communication package developed by .NET that supports multiple unpacket strategies</Description>
 	</PropertyGroup>
 

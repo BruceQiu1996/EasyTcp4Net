@@ -1,3 +1,6 @@
+>已发布Nuget:https://www.nuget.org/packages/EasyTcp4Net/
+或包管理器搜索"EasyTcp4Net"  ！！！！！！！！！！！！！！！！！！！！！！！
+
 > 这是一个基于c# Pipe,ReadonlySequence的高性能Tcp通信库，旨在提供稳定，高效，可靠的tcp通讯服务。
 
 - [x] 基础的消息通讯
