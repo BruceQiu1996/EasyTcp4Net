@@ -12,6 +12,10 @@
 - [x] 粘包和断包处理 （支持固定头处理，固定长度处理，固定字符处理）
 - [x] 日志支持
  
+### 示例程序
+一个示例的聊天程序，功能包括，文本发送，图片发送，断线重连，消息发送成功确认，消息发送失败提示等。
+地址：https://github.com/BruceQiu1996/EasyChat
+
 ### Pipe & ReadOnlySequence
 ![alt text](./Images/image.png)
 
