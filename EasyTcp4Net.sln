@@ -13,12 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyTcp4Net.WpfTest", "Easy
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyTcp4Net.UnitTest", "EasyTcp4Net.UnitTest\EasyTcp4Net.UnitTest.csproj", "{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Example", "Example", "{29F0AAC6-FD7A-48AE-880E-4A775CA93688}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileTransfer", "Example\FileTransfer\FileTransfer.csproj", "{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileTransfer.Common", "Example\FileTransfer.Common\FileTransfer.Common.csproj", "{5F7E9E1D-68DC-44CB-967B-B23B1751655F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,21 +39,9 @@ Global
 		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDA6145E-0385-406B-A0F2-EAFECCC9F1CF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5F7E9E1D-68DC-44CB-967B-B23B1751655F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5F7E9E1D-68DC-44CB-967B-B23B1751655F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5F7E9E1D-68DC-44CB-967B-B23B1751655F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5F7E9E1D-68DC-44CB-967B-B23B1751655F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{32A10AD8-1FB0-4BCB-BCF6-FF459860EE6A} = {29F0AAC6-FD7A-48AE-880E-4A775CA93688}
-		{5F7E9E1D-68DC-44CB-967B-B23B1751655F} = {29F0AAC6-FD7A-48AE-880E-4A775CA93688}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0208ABC8-681B-4FDD-BB27-5AA43CEA23C6}
