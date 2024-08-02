@@ -179,7 +179,7 @@ namespace EasyTcp4Net
                             await _socket.DisconnectAsync(true);
                         }
                         catch { }
-                        _logger?.LogError($"连接{retryTimes}次失败:{ex}");
+                        _logger?.LogError($"Connecting {retryTimes} times is faild:{ex}");
                         if (_options.ConnectRetryTimes < retryTimes)
                             throw;
                         else
