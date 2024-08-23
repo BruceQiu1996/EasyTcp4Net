@@ -1,5 +1,5 @@
 >已发布Nuget:https://www.nuget.org/packages/EasyTcp4Net/
-或包管理器搜索"EasyTcp4Net"  ！！！！！！！！！！！！！！！！！！！！！！！
+或包管理器搜索**EasyTcp4Net** 
 
 > 这是一个基于c# Pipe,ReadonlySequence的高性能Tcp通信库，旨在提供稳定，高效，可靠的tcp通讯服务。
 
@@ -81,7 +81,7 @@ EasyTcpServer _server = new EasyTcpServer(_serverPort);
 _server.StartListen();
 ```
 #### 开启一个Server并且配置SSL证书
-```
+```cs
 EasyTcpServer easyTcpServer = new EasyTcpServer(7001, new EasyTcpServerOptions()
 {
     IsSsl = true,
@@ -94,23 +94,23 @@ EasyTcpServer easyTcpServer = new EasyTcpServer(7001, new EasyTcpServerOptions()
 ```
 #### 开启一个Server，配置数据过滤器处理粘包断包
 #### 固定头处理
-```
+```cs
 //参数分别为：数据包头长度，数据包体长度所在头下标，数据包体长度字节数，是否小端在前
 easyTcpServer.SetReceiveFilter(new FixedHeaderPackageFilter(7, 5, 4, true));
 ```
 #### 固定长度处理
-```
+```cs
 //参数分别为：数据包固定长度
 easyTcpServer.SetReceiveFilter(new FixedLengthPackageFilter(50));
 ```
 #### 固定字符处理（不推荐）
-```
+```cs
 //参数分别为：截取的字符
 easyTcpServer.SetReceiveFilter(new FixedCharPackageFilter('\n'));
 ```
 
 #### 客户端收到数据的回调
-```
+```cs
 easyTcpClient.OnReceivedData += (obj, e) =>
 {
     Console.WriteLine(string.Join(',', e.Data));
@@ -120,7 +120,7 @@ easyTcpClient.OnReceivedData += (obj, e) =>
 
 
 #### 服务端收到数据的回调
-```
+```cs
 easyTcpServer.OnReceivedData += async (obj, e) =>
 {
     Console.WriteLine($"数据来自：{e.Session.RemoteEndPoint}");
@@ -129,7 +129,7 @@ easyTcpServer.OnReceivedData += async (obj, e) =>
 ```
 #### 日志配置
 
-```
+```cs
 var _server = new EasyTcpServer(_serverPort, new EasyTcpServerOptions()
 {
     ConnectionsLimit = 2,
