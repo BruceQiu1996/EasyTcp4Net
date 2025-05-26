@@ -349,6 +349,20 @@ namespace EasyTcp4Net
             }).ConfigureAwait(false);
         }
 
+        public async Task SendAsync(string sessionId, Memory<byte> data)
+        {
+            var sessions =
+                _clients.Where(x => x.Value.SessionId == sessionId);
+
+            await Parallel.ForEachAsync(sessions, _lifecycleTokenSource.Token, async (item, token) =>
+            {
+                if (!token.IsCancellationRequested)
+                {
+                    await item.Value.SendAsync(data);
+                }
+            }).ConfigureAwait(false);
+        }
+
         public async Task SendAsync(IPEndPoint endpoint, byte[] data)
         {
             var result =
@@ -360,9 +374,15 @@ namespace EasyTcp4Net
             }
         }
 
-        public async Task SendAsync(string sessionId, Memory<byte> data)
+        public async Task SendAsync(IPEndPoint endpoint,Memory<byte> data)
         {
-            await SendAsync(sessionId, data.ToArray());
+            var result =
+                _clients.TryGetValue(endpoint.ToString(), out var client);
+
+            if (result)
+            {
+                await client.SendAsync(data);
+            }
         }
 
         public async Task SendAsync(ClientSession session, byte[] data)
